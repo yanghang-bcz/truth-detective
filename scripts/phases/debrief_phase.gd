@@ -11,9 +11,9 @@ extends CasePhase
 func _build() -> void:
 	var _c := scroll_column(900)
 	_c.add_child(UIKit.gap(38))
-	_c.add_child(UIKit.eyebrow("REASONING DEBRIEF"))
+	_c.add_child(UIKit.eyebrow(Locale.t("phase.debrief")))
 	_c.add_child(UIKit.gap(12))
-	_c.add_child(UIKit.heading("How your reading changed", 34))
+	_c.add_child(UIKit.heading(Locale.t("debrief.title"), 34))
 	_c.add_child(UIKit.gap(16))
 	_c.add_child(UIKit.rule(Color(UIKit.INK4.r, UIKit.INK4.g, UIKit.INK4.b, 0.9)))
 	_c.add_child(UIKit.gap(18))
@@ -23,19 +23,19 @@ func _build() -> void:
 	_c.add_child(_stats_strip())
 	_c.add_child(UIKit.gap(38))
 
-	_c.add_child(section("YOUR JUDGMENT JOURNEY"))
+	_c.add_child(section(Locale.t("debrief.journey")))
 	_c.add_child(UIKit.gap(20))
 	_c.add_child(_journey())
 	_c.add_child(UIKit.gap(40))
 
-	_c.add_child(section("CLAIM REVIEW"))
+	_c.add_child(section(Locale.t("debrief.review")))
 	_c.add_child(UIKit.gap(20))
 	for claim in CaseData.claims(case):
 		_c.add_child(_claim_review(claim))
 		_c.add_child(UIKit.gap(24))
 
 	_c.add_child(UIKit.gap(16))
-	_c.add_child(section("REASONING PATTERNS"))
+	_c.add_child(section(Locale.t("debrief.patterns")))
 	_c.add_child(UIKit.gap(20))
 	_c.add_child(_patterns())
 	_c.add_child(UIKit.gap(40))
@@ -56,14 +56,14 @@ func _stats_strip() -> Control:
 
 	var revisions := 0
 	for entry in CaseState.history:
-		if str(entry.get("trigger", "")) != "Initial":
+		if str(entry.get("trigger", "")) != "initial":
 			revisions += 1
 
 	var entries := [
-		["files opened", "%d / 8" % CaseState.unlocked.size()],
-		["board revisions", str(revisions)],
-		["analyst consults", str(CaseState.ai_calls)],
-		["points spent", "%d / %d" % [CaseState.points_used, CaseState.points_total]],
+		[Locale.t("debrief.files"), "%d / 8" % CaseState.unlocked.size()],
+		[Locale.t("debrief.revisions"), str(revisions)],
+		[Locale.t("debrief.consults"), str(CaseState.ai_calls)],
+		[Locale.t("debrief.points"), "%d / %d" % [CaseState.points_used, CaseState.points_total]],
 	]
 	for pair in entries:
 		var cell := VBoxContainer.new()
@@ -85,13 +85,13 @@ func _journey() -> Control:
 	if entries.is_empty():
 		entries = CaseState.history
 	if entries.is_empty():
-		box.add_child(UIKit.paragraph("No judgments were recorded.", 14, UIKit.SLATE))
+		box.add_child(UIKit.paragraph(Locale.t("debrief.no_journey"), 14, UIKit.SLATE))
 		return box
 
 	# 时间轴只画主 Claim 那一条弧线。四条 Claim 的最终判定在下面的 Claim Review 里
 	# 逐条并排对照，再在这里重复一遍，只会把"我是怎么改变主意的"这条线冲淡。
 	var primary_claim := CaseData.claim(case, primary)
-	box.add_child(UIKit.meta("claim %s · %s" % [primary, str(primary_claim.get("short", ""))], 10, UIKit.SLATE, 2))
+	box.add_child(UIKit.meta(Locale.tf("debrief.claim_of", [primary, str(primary_claim.get("short", ""))]), 10, UIKit.SLATE, 2))
 	box.add_child(UIKit.gap(16))
 
 	for i in range(entries.size()):
@@ -114,7 +114,7 @@ func _journey() -> Control:
 
 		var line := HBoxContainer.new()
 		line.add_theme_constant_override("separation", 14)
-		var trigger := UIKit.meta(str(entry.get("trigger", "")), 10, UIKit.SLATE, 2)
+		var trigger := UIKit.meta(_trigger_text(str(entry.get("trigger", ""))), 10, UIKit.SLATE, 2)
 		trigger.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		line.add_child(trigger)
 		# 一条两端渐隐的引线。没有它，左边的触发事件和右边的置信度读数是两个孤立的点，
@@ -132,7 +132,8 @@ func _journey() -> Control:
 		var second := HBoxContainer.new()
 		second.add_theme_constant_override("separation", 8)
 		second.add_child(verdict_pill(str(entry.get("judgment", ""))))
-		second.add_child(UIKit.tag("CLAIM %s" % str(entry.get("claim", "")), UIKit.SLATE))
+		second.add_child(UIKit.tag(Locale.tf("debrief.claim_of",
+			[str(entry.get("claim", "")), str(CaseData.claim(case, str(entry.get("claim", ""))).get("short", ""))]), UIKit.SLATE))
 		content.add_child(second)
 
 		content.add_child(UIKit.gap(14))
@@ -142,7 +143,7 @@ func _journey() -> Control:
 	var others := {}
 	for entry in CaseState.history:
 		var claim_id := str(entry.get("claim", ""))
-		if claim_id == primary or str(entry.get("trigger", "")) == "Final":
+		if claim_id == primary or str(entry.get("trigger", "")) == "final":
 			continue
 		others[claim_id] = int(others.get(claim_id, 0)) + 1
 	if not others.is_empty():
@@ -150,7 +151,7 @@ func _journey() -> Control:
 		for claim_id in others:
 			parts.append("%s ×%d" % [claim_id, others[claim_id]])
 		box.add_child(UIKit.gap(16))
-		box.add_child(UIKit.paragraph("Also revised during the investigation: " + ", ".join(parts) + ". Those claims are compared in full below.", 12, UIKit.MUTED))
+		box.add_child(UIKit.paragraph(Locale.tf("debrief.others", [", ".join(parts)]), 12, UIKit.MUTED))
 	return box
 
 # ─────────────────────────────────────────────────────────────
@@ -178,8 +179,8 @@ func _claim_review(claim: Dictionary) -> Control:
 
 	var compare := HBoxContainer.new()
 	compare.add_theme_constant_override("separation", 28)
-	compare.add_child(_compare_cell("your answer", answer, answer != ""))
-	compare.add_child(_compare_cell("what the evidence supports", correct, true))
+	compare.add_child(_compare_cell(Locale.t("debrief.your_answer"), answer, answer != ""))
+	compare.add_child(_compare_cell(Locale.t("debrief.correct"), correct, true))
 	box.add_child(compare)
 
 	box.add_child(UIKit.paragraph(str(claim.get("explanation", "")), 14,
@@ -193,12 +194,24 @@ func _claim_review(claim: Dictionary) -> Control:
 	box.add_child(UIKit.rule(Color(UIKit.INK3.r, UIKit.INK3.g, UIKit.INK3.b, 0.7)))
 	return box
 
+## 历史里存的是触发事件的"键"（initial / final / analyst / evidence:Exx），
+## 不是给人看的文字 —— 否则切一次语言，整条时间轴都会留在旧语言里。
+func _trigger_text(raw: String) -> String:
+	if raw.begins_with("evidence:"):
+		return Locale.tf("trigger.evidence", [raw.substr(9)])
+	match raw:
+		"initial": return Locale.t("trigger.initial")
+		"final": return Locale.t("trigger.final")
+		"analyst": return Locale.t("trigger.analyst")
+		_: return Locale.t("trigger.revised")
+
+
 func _compare_cell(caption: String, judgment: String, dim_if_empty: bool) -> Control:
 	var cell := VBoxContainer.new()
 	cell.add_theme_constant_override("separation", 7)
 	cell.add_child(UIKit.meta(caption, 10, UIKit.SLATE, 2))
 	if judgment == "":
-		cell.add_child(UIKit.tag("NO ANSWER", UIKit.MUTED))
+		cell.add_child(UIKit.tag(Locale.t("debrief.no_answer"), UIKit.MUTED))
 	else:
 		cell.add_child(verdict_pill(judgment, not dim_if_empty))
 	return cell
@@ -230,7 +243,7 @@ func _pattern_row(key: String, ok: bool, specs: Dictionary) -> Control:
 	head.add_child(label)
 	head.add_child(UIKit.fill(UIKit.hgap(0)))
 	var color := UIKit.J_SUPPORTED if ok else UIKit.J_SUSPICIOUS
-	var status := UIKit.meta("strong" if ok else "needs attention", 10, color, 2)
+	var status := UIKit.meta(Locale.t("debrief.strong") if ok else Locale.t("debrief.weak"), 10, color, 2)
 	status.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(status)
 	box.add_child(head)
@@ -260,12 +273,15 @@ func _footer() -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 18)
 
-	var note := UIKit.paragraph("Case 001 ends here. The station is still outside.", 12, UIKit.MUTED)
+	# 页脚兼作一句免责声明：这个世界里的人和账号都是编的。
+	# 放在最后、压到最暗 —— 它是必要的，但不该被当成一句台词。
+	var note := UIKit.paragraph("%s  %s" % [Locale.t("debrief.footer"),
+		str(case.get("fiction_notice", ""))], 12, UIKit.MUTED)
 	note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	note.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(note)
 
-	var back := UIKit.primary_button("Return to Stillwater Corner")
+	var back := UIKit.primary_button(Locale.t("debrief.return"))
 	back.custom_minimum_size = Vector2(340, 46)
 	back.pressed.connect(func() -> void: finished.emit("close"))
 	row.add_child(back)

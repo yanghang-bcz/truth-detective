@@ -262,12 +262,14 @@ static func primary_button(text: String) -> Button:
 	b.add_theme_color_override("font_hover_color", INK0)
 	b.add_theme_color_override("font_pressed_color", INK0)
 	b.add_theme_color_override("font_disabled_color", Color(INK0.r, INK0.g, INK0.b, 0.35))
-	b.add_theme_stylebox_override("normal", _btn_box(LAMP, 26))
-	b.add_theme_stylebox_override("hover", _btn_box(LAMP.lightened(0.12), 34))
-	b.add_theme_stylebox_override("pressed", _btn_box(LAMP.darkened(0.18), 18))
-	b.add_theme_stylebox_override("disabled", _btn_box(Color(LAMP.r, LAMP.g, LAMP.b, 0.22), 0))
+	# 光晕从 26/34/18 收到 12/16/8。原先它是整屏最亮的东西，像一张优惠券 ——
+	# 而这一页要的是"克制、低饱和"。暖黄色保留，只是不再往外喊。
+	b.add_theme_stylebox_override("normal", _btn_box(LAMP.darkened(0.10), 12))
+	b.add_theme_stylebox_override("hover", _btn_box(LAMP.lightened(0.06), 16))
+	b.add_theme_stylebox_override("pressed", _btn_box(LAMP.darkened(0.22), 8))
+	b.add_theme_stylebox_override("disabled", _btn_box(Color(LAMP.r, LAMP.g, LAMP.b, 0.18), 0))
 	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	b.custom_minimum_size = Vector2(0, 46)
+	b.custom_minimum_size = Vector2(0, 44)
 	return b
 
 static func ghost_button(text: String) -> Button:
@@ -299,10 +301,47 @@ static func _btn_box(bg: Color, glow: int, border: Color = Color(0, 0, 0, 0)) ->
 		sb.set_border_width_all(1)
 		sb.border_color = border
 	if glow > 0:
-		sb.shadow_color = Color(bg.r, bg.g, bg.b, 0.30)
+		sb.shadow_color = Color(bg.r, bg.g, bg.b, 0.20)
 		sb.shadow_size = glow
 	sb.anti_aliasing = true
 	return sb
+
+## 顶栏用的极小切换钮（语言）。它不是主操作，所以只做"选中态 + 悬停"，
+## 一点光晕都不给 —— 顶栏上最该抢眼的东西是最不该抢眼的东西。
+static func chip_button(text: String, color: Color = LAMP) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.toggle_mode = true
+	b.add_theme_font_override("font", tracked(font_mono(), 1))
+	b.add_theme_font_size_override("font_size", 11)
+	b.add_theme_color_override("font_color", MUTED)
+	b.add_theme_color_override("font_hover_color", CHALK)
+	b.add_theme_color_override("font_pressed_color", color)
+	b.add_theme_color_override("font_hover_pressed_color", color)
+	b.add_theme_color_override("font_focus_color", MUTED)
+	b.add_theme_stylebox_override("normal", _chip_box(Color(0, 0, 0, 0), INK3))
+	b.add_theme_stylebox_override("hover", _chip_box(INK2, INK4))
+	b.add_theme_stylebox_override("pressed",
+		_chip_box(Color(color.r, color.g, color.b, 0.16), Color(color.r, color.g, color.b, 0.60)))
+	b.add_theme_stylebox_override("hover_pressed",
+		_chip_box(Color(color.r, color.g, color.b, 0.20), Color(color.r, color.g, color.b, 0.72)))
+	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	b.custom_minimum_size = Vector2(0, 24)
+	return b
+
+static func _chip_box(bg: Color, border: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.set_corner_radius_all(2)
+	sb.set_border_width_all(1)
+	sb.border_color = border
+	sb.content_margin_left = 9
+	sb.content_margin_right = 9
+	sb.content_margin_top = 2
+	sb.content_margin_bottom = 2
+	sb.anti_aliasing = true
+	return sb
+
 
 ## 纯文字的"链接"按钮，用在次要的继续动作上。
 static func text_button(text: String, color: Color = SLATE) -> Button:
@@ -328,12 +367,16 @@ static func judgment_color(key: String) -> Color:
 		"unsupported": return J_UNSUPPORTED
 		_: return J_INSUFFICIENT
 
+## 判定名。英文是内置的兜底值，Locale 初始化时会用当前语言覆盖它。
+static var judgment_names: Dictionary = {
+	"supported": "Supported",
+	"suspicious": "Suspicious",
+	"unsupported": "Unsupported",
+	"insufficient": "Not Enough Evidence",
+}
+
 static func judgment_label(key: String) -> String:
-	match key:
-		"supported": return "Supported"
-		"suspicious": return "Suspicious"
-		"unsupported": return "Unsupported"
-		_: return "Not Enough Evidence"
+	return str(judgment_names.get(key, key))
 
 ## 一个小色点 + 标签。色点比背景色块克制，也能在任意底色上工作。
 static func dot(color: Color, size: int = 8) -> Control:
@@ -366,10 +409,10 @@ static func tag(text: String, color: Color = SLATE) -> PanelContainer:
 static func style_scroll(container: ScrollContainer, on_paper: bool = false) -> void:
 	container.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	var track := Color(0, 0, 0, 0)
-	var knob := Color(0, 0, 0, 0.20) if on_paper else Color(1, 1, 1, 0.14)
-	var knob_hi := Color(0, 0, 0, 0.36) if on_paper else Color(1, 1, 1, 0.30)
+	var knob := Color(0, 0, 0, 0.18) if on_paper else Color(1, 1, 1, 0.10)
+	var knob_hi := Color(0, 0, 0, 0.32) if on_paper else Color(1, 1, 1, 0.22)
 	for bar in [container.get_v_scroll_bar(), container.get_h_scroll_bar()]:
-		bar.custom_minimum_size = Vector2(6, 6)
+		bar.custom_minimum_size = Vector2(5, 5)
 		bar.add_theme_stylebox_override("scroll", _stylebox(track, track, 3, 0, 0))
 		bar.add_theme_stylebox_override("scroll_focus", _stylebox(track, track, 3, 0, 0))
 		bar.add_theme_stylebox_override("grabber", _stylebox(knob, knob, 3, 0, 0))

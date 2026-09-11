@@ -89,9 +89,9 @@ func _build() -> void:
 		body.add_child(UIKit.gap(12))
 
 	body.add_child(UIKit.gap(10))
-	body.add_child(_list_block("What this establishes", evidence.get("proves", []), UIKit.PAPER_PROVES))
+	body.add_child(_list_block(Locale.t("detail.establishes"), evidence.get("proves", []), UIKit.PAPER_PROVES))
 	body.add_child(UIKit.gap(16))
-	body.add_child(_list_block("What this does not establish", evidence.get("does_not_prove", []), UIKit.PAPER_DOES_NOT))
+	body.add_child(_list_block(Locale.t("detail.not_establishes"), evidence.get("does_not_prove", []), UIKit.PAPER_DOES_NOT))
 
 	body.add_child(UIKit.gap(22))
 	body.add_child(_hook())
@@ -153,10 +153,10 @@ func _readout() -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 28)
 	var entries := [
-		["TYPE", str(evidence.get("type", ""))],
-		["RELIABILITY", str(evidence.get("reliability", ""))],
-		["CONTEXT", str(evidence.get("context", ""))],
-		["COST", "%d IP" % int(evidence.get("cost", 1))],
+		[Locale.t("detail.type"), str(evidence.get("type", ""))],
+		[Locale.t("detail.reliability"), str(evidence.get("reliability", ""))],
+		[Locale.t("detail.context"), str(evidence.get("context", ""))],
+		[Locale.t("detail.cost"), Locale.tf("board.cost", [int(evidence.get("cost", 1))])],
 	]
 	for pair in entries:
 		var cell := VBoxContainer.new()
@@ -221,17 +221,18 @@ func _classification() -> Control:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 11)
 	bar.add_child(box)
-	box.add_child(UIKit.meta("your reading", 10, Color(UIKit.PAPER_INK_SOFT.r, UIKit.PAPER_INK_SOFT.g, UIKit.PAPER_INK_SOFT.b, 0.9), 3))
+	box.add_child(UIKit.meta(Locale.t("detail.reading"), 10,
+		Color(UIKit.PAPER_INK_SOFT.r, UIKit.PAPER_INK_SOFT.g, UIKit.PAPER_INK_SOFT.b, 0.9), 3))
 
 	# 两问并排。竖着排会把第二问推到折叠线以下，而两问都是非答不可的。
 	var spec: Dictionary = CaseState.data.get("classification", {})
 	var cols := HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 26)
 	box.add_child(cols)
-	var relevance := _choice_row("relevance", "How relevant is this?", spec.get("relevance", []), _relevance)
+	var relevance := _choice_row("relevance", Locale.t("detail.relevance"), spec.get("relevance", []), _relevance)
 	relevance.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cols.add_child(relevance)
-	var kind := _choice_row("kind", "What kind of information is this?", spec.get("kind", []), _kind)
+	var kind := _choice_row("kind", Locale.t("detail.kind"), spec.get("kind", []), _kind)
 	kind.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cols.add_child(kind)
 	return bar
@@ -309,12 +310,12 @@ func _footer() -> Control:
 	row.add_theme_constant_override("separation", 18)
 	bar.add_child(row)
 
-	var note := UIKit.label("Scroll for the full card · this file stays open until you close it.", 12, UIKit.PAPER_INK_SOFT, UIKit.font_ui())
+	var note := UIKit.label(Locale.t("detail.note"), 12, UIKit.PAPER_INK_SOFT, UIKit.font_ui())
 	note.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(note)
 
-	var close_button := UIKit.primary_button("File It")
+	var close_button := UIKit.primary_button(Locale.t("detail.file"))
 	close_button.custom_minimum_size = Vector2(150, 40)
 	close_button.pressed.connect(close)
 	row.add_child(close_button)

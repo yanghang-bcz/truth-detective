@@ -16,7 +16,7 @@ var focused_claim := "B"
 var _rows := {}                  ## evidence id -> 左栏那一行
 var _cards := {}                 ## evidence id -> 证据卡
 var _confidence_by_claim := {}
-var _pending_trigger := "Revised"
+var _pending_trigger := "revised"
 var _detail: EvidenceDetail
 
 var _judge_scroll: ScrollContainer
@@ -70,7 +70,7 @@ func _build_sources() -> Control:
 	var col := VBoxContainer.new()
 	col.custom_minimum_size = Vector2(300, 0)
 	col.add_theme_constant_override("separation", 12)
-	col.add_child(section("INVESTIGATION SOURCES"))
+	col.add_child(section(Locale.t("board.sources")))
 
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -160,10 +160,10 @@ func _source_row(evidence_id: String) -> Control:
 	var price := ""
 	var price_color := UIKit.MUTED
 	if unlocked:
-		price = "READ" if opened else "OPEN"
+		price = Locale.t("board.read") if opened else Locale.t("board.open")
 		price_color = UIKit.MUTED
 	else:
-		price = "%d IP" % cost
+		price = Locale.tf("board.cost", [cost])
 		price_color = UIKit.LAMP if affordable else UIKit.MUTED.darkened(0.30)
 	var cost_label := UIKit.meta(price, 10, price_color, 1)
 	cost_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -193,14 +193,14 @@ func _on_source_pressed(evidence_id: String) -> void:
 	var e := CaseData.evidence(case, evidence_id)
 	var cost := int(e.get("cost", 1))
 	if not CaseState.can_afford(cost):
-		_flash_hint("Not enough investigation points. %s costs %d — you have %d."
-			% [evidence_id, cost, CaseState.remaining()], UIKit.J_UNSUPPORTED)
+		_flash_hint(Locale.tf("board.broke", [evidence_id, cost, CaseState.remaining()]),
+			UIKit.J_UNSUPPORTED)
 		return
 	if not CaseState.unlock(evidence_id):
 		return
 	_refresh_sources()
 	_refresh_board(true, evidence_id)
-	_pending_trigger = "After Evidence %s" % evidence_id
+	_pending_trigger = "evidence:" + evidence_id
 	_open_detail(evidence_id)
 
 # ─────────────────────────────────────────────────────────────
@@ -214,7 +214,7 @@ func _build_board() -> Control:
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 12)
 	col.add_child(head)
-	var section_box := section("EVIDENCE BOARD")
+	var section_box := section(Locale.t("board.evidence"))
 	section_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(section_box)
 
@@ -288,13 +288,12 @@ func _empty_state() -> Control:
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
 	panel.add_child(col)
 
-	var title := UIKit.meta("the board is empty", 11, UIKit.INK4, 3)
+	var title := UIKit.meta(Locale.t("board.empty_title"), 11, UIKit.INK4, 3)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(title)
 
-	var body := UIKit.paragraph(
-		"Nothing has been filed yet. Pick a lead on the left and spend the points — every file you open stays open, so nothing here is wasted except the points it costs.",
-		13, Color(UIKit.SLATE.r, UIKit.SLATE.g, UIKit.SLATE.b, 0.9))
+	var body := UIKit.paragraph(Locale.t("board.empty_body"), 13,
+		Color(UIKit.SLATE.r, UIKit.SLATE.g, UIKit.SLATE.b, 0.9))
 	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(body)
 	return panel
@@ -321,7 +320,7 @@ func _refresh_board(animate_new: bool = false, new_id: String = "") -> void:
 			tween.tween_property(card, "modulate:a", 1.0, 0.32).set_trans(Tween.TRANS_SINE)
 
 	var total_opened: int = CaseState.unlocked.size()
-	_board_count.text = "%d / %d OPENED" % [total_opened, 8]
+	_board_count.text = Locale.tf("board.opened", [total_opened, 8])
 	_board_empty.visible = CaseState.unlocked.is_empty()
 
 # ─────────────────────────────────────────────────────────────
@@ -351,7 +350,7 @@ func _build_judgment() -> Control:
 	inner.add_theme_constant_override("separation", 13)
 	panel.add_child(inner)
 
-	inner.add_child(UIKit.eyebrow("CURRENT JUDGMENT"))
+	inner.add_child(UIKit.eyebrow(Locale.t("board.current")))
 	inner.add_child(_claim_tab_row())
 
 	_claim_short = UIKit.meta("", 10, UIKit.SLATE, 2)
@@ -367,12 +366,9 @@ func _build_judgment() -> Control:
 	_confidence_box = VBoxContainer.new()
 	inner.add_child(_confidence_box)
 
-	var note := UIKit.paragraph("You can revise this at any time. The debrief will show every change you made and what triggered it.", 11, UIKit.MUTED)
-	inner.add_child(note)
-
 	# ── 分析员 ────────────────────────────────────────────
 	_analyst = AnalystPanel.make(focused_claim)
-	_analyst.spent.connect(func(_c: int) -> void: _pending_trigger = "After Analyst consultation")
+	_analyst.spent.connect(func(_c: int) -> void: _pending_trigger = "analyst")
 	# 回答出现在面板下方，可能落在视野之外 —— 主动把它滚进来，
 	# 否则玩家点了按钮却看不到任何反应，会以为坏了。
 	_analyst.answered.connect(_on_analyst_answered)
@@ -454,7 +450,8 @@ func _sync_judgment_panel() -> void:
 		tab["button"].button_pressed = (id == focused_claim)
 
 	var claim := CaseData.claim(case, focused_claim)
-	_claim_short.text = "CLAIM %s · %s" % [focused_claim, str(claim.get("short", "")).to_upper()]
+	_claim_short.text = Locale.tf("board.claim_short",
+		[focused_claim, str(claim.get("short", "")).to_upper()])
 	_claim_text.text = "“" + str(claim.get("text", "")) + "”"
 
 	var last := _last_judgment(focused_claim)
@@ -510,7 +507,7 @@ func _open_detail(evidence_id: String) -> void:
 		_detail.queue_free()
 	CaseState.focused_evidence = evidence_id
 	CaseState.mark_opened(evidence_id)
-	_pending_trigger = "After Evidence %s" % evidence_id
+	_pending_trigger = "evidence:" + evidence_id
 
 	var card: EvidenceCard = _cards.get(evidence_id, null)
 	if card != null:
@@ -540,13 +537,13 @@ func _build_footer() -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 18)
 
-	_hint = UIKit.paragraph("Spend the points where they will change your mind. Ten is not enough for everything.", 12,
+	_hint = UIKit.paragraph(Locale.t("board.hint"), 12,
 		Color(UIKit.SLATE.r, UIKit.SLATE.g, UIKit.SLATE.b, 0.85))
 	_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_hint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(_hint)
 
-	var submit := UIKit.primary_button("Submit Investigation")
+	var submit := UIKit.primary_button(Locale.t("board.submit"))
 	submit.custom_minimum_size = Vector2(300, 46)
 	submit.pressed.connect(func() -> void: finished.emit("final"))
 	row.add_child(submit)

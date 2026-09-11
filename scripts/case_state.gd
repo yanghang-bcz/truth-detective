@@ -12,7 +12,7 @@ signal points_changed(remaining: int)
 signal unlocked_changed(id: String)
 signal judgment_recorded(entry: Dictionary)
 
-const CASE_PATH := "res://data/case_001.json"
+const CASE_ID := "case_001"
 
 var data: Dictionary = {}
 
@@ -35,14 +35,25 @@ var ai_calls: int = 0
 
 
 func _ready() -> void:
-	data = CaseData.load_case(CASE_PATH)
+	data = CaseData.load_localized(CASE_ID, Locale.lang)
 	if data.is_empty():
-		push_error("CaseState: 无法加载 " + CASE_PATH)
+		push_error("CaseState: 无法加载 " + CASE_ID)
+
+
+## 切语言时重新读一遍内容。**只换文本，不动进度** ——
+## 玩家翻到一半换语言，调查点、已开档案、判定历史都该原样还在。
+func reload_for_language() -> void:
+	var fresh := CaseData.load_localized(CASE_ID, Locale.lang)
+	if fresh.is_empty():
+		return
+	data = fresh
+	points_total = int(data.get("investigation_points", points_total))
+	points_changed.emit(remaining())
 
 
 func start(payload: Dictionary = {}) -> void:
 	if payload.is_empty():
-		payload = CaseData.load_case(CASE_PATH)
+		payload = CaseData.load_localized(CASE_ID, Locale.lang)
 	data = payload
 	points_total = int(data.get("investigation_points", 10))
 	points_used = 0

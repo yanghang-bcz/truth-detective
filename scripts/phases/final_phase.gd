@@ -11,24 +11,22 @@ var _hint: Label
 
 func _build() -> void:
 	var _c := scroll_column(860)
-	_c.add_child(UIKit.gap(38))
-	_c.add_child(UIKit.eyebrow("FINAL JUDGMENT"))
+	_c.add_child(UIKit.gap(30))
+	_c.add_child(UIKit.eyebrow(Locale.t("phase.final")))
 	_c.add_child(UIKit.gap(12))
-	_c.add_child(UIKit.heading("Submit your reading of the record", 34))
+	_c.add_child(UIKit.heading(Locale.t("final.title"), 34))
 	_c.add_child(UIKit.gap(16))
 	_c.add_child(UIKit.rule(Color(UIKit.INK4.r, UIKit.INK4.g, UIKit.INK4.b, 0.9)))
 	_c.add_child(UIKit.gap(18))
-	_c.add_child(UIKit.paragraph(
-		"Four claims, drawn from the same incident. Some of them the evidence can carry, and some of them it cannot. Judge each one on its own.",
-		16, UIKit.FOG))
-	_c.add_child(UIKit.gap(34))
+	_c.add_child(UIKit.paragraph(Locale.t("final.lede"), 16, UIKit.FOG))
+	_c.add_child(UIKit.gap(32))
 
 	for claim in CaseData.claims(case):
 		_c.add_child(_claim_block(claim))
-		_c.add_child(UIKit.gap(24))
+		_c.add_child(UIKit.gap(22))
 
 	_c.add_child(_footer())
-	_c.add_child(UIKit.gap(48))
+	_c.add_child(UIKit.gap(44))
 	stagger_fade(_c, 0.05)
 
 func _claim_block(claim: Dictionary) -> Control:
@@ -50,7 +48,7 @@ func _claim_block(claim: Dictionary) -> Control:
 	short.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(short)
 	head.add_child(UIKit.fill(UIKit.hgap(0)))
-	var status := UIKit.meta("unanswered", 10, UIKit.MUTED, 1)
+	var status := UIKit.meta(Locale.t("final.unanswered"), 10, UIKit.MUTED, 1)
 	status.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(status)
 	box.add_child(head)
@@ -71,7 +69,7 @@ func _claim_block(claim: Dictionary) -> Control:
 	# 那么程序化回填的判定会让上面那行 "unanswered" 一直挂着。
 	judgment.value_changed.connect(func(key: String) -> void:
 		if key == "":
-			status.text = "unanswered"
+			status.text = Locale.t("final.unanswered")
 			status.add_theme_color_override("font_color", UIKit.MUTED)
 		else:
 			status.text = UIKit.judgment_label(key).to_upper()
@@ -84,7 +82,7 @@ func _footer() -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 18)
 
-	var back := UIKit.text_button("← Back to Investigation")
+	var back := UIKit.text_button(Locale.t("final.back"))
 	back.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	back.pressed.connect(func() -> void: finished.emit("board"))
 	row.add_child(back)
@@ -94,7 +92,7 @@ func _footer() -> Control:
 	_hint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(_hint)
 
-	var submit := UIKit.primary_button("Submit Investigation")
+	var submit := UIKit.primary_button(Locale.t("final.submit"))
 	submit.custom_minimum_size = Vector2(300, 46)
 	submit.pressed.connect(_on_submit)
 	row.add_child(submit)
@@ -106,7 +104,7 @@ func _on_submit() -> void:
 		if _rows[id]["judgment"].value == "":
 			missing.append(id)
 	if not missing.is_empty():
-		_hint.text = "Still unanswered: " + ", ".join(missing) + ". Every claim needs a reading, even if the reading is that the file cannot say."
+		_hint.text = Locale.tf("final.missing", [", ".join(missing)])
 		_hint.add_theme_color_override("font_color", UIKit.J_SUSPICIOUS)
 		var tween := create_tween()
 		tween.tween_property(_hint, "modulate", Color(1.4, 1.15, 0.9, 1.0), 0.12)
@@ -117,6 +115,6 @@ func _on_submit() -> void:
 		var judgment: String = _rows[id]["judgment"].value
 		var confidence: int = _rows[id]["confidence"].call()
 		CaseState.set_final(id, judgment, confidence)
-		CaseState.record_judgment(id, judgment, confidence, "Final")
+		CaseState.record_judgment(id, judgment, confidence, "final")
 
 	finished.emit("debrief")

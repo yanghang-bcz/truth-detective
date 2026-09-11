@@ -110,9 +110,11 @@ func _on_curtain_covered() -> void:
 	match _state:
 		State.OPENING:
 			_build_case()
+			_set_world_rendering(false)
 			_curtain.fade_in(0.38)
 		State.CLOSING:
 			_teardown_case()
+			_set_world_rendering(true)
 			_curtain.fade_in(0.32)
 		_:
 			pass
@@ -135,6 +137,27 @@ func _on_curtain_cleared() -> void:
 			pass
 
 
+## 开关 3D 街区的渲染与玩家物理。
+##
+## 案件界面是一层不透明的全屏 CanvasLayer，街区被完全盖住 —— 但 Godot 不会因此
+## 跳过它，每帧照旧把整条街（两百多个绘制调用、MSAA 解析、每像素 40 次迭代的
+## 灯束着色器）画一遍，然后被上面那层界面整个盖住。
+##
+## 实测（tools/bench_case.tscn，1280x800）：整合前的整帧中位耗时 6.59ms，
+## 关掉街区之后 2.21ms —— 玩家盯着一页静态界面的时候，GPU 本来有 2/3 的活是白干的。
+##
+## 只动可见性，绝不动 process_mode：Curtain 的补间挂在街区的子节点上，
+## 一旦把整棵子树停掉，补间会跟着冻结，黑屏就再也淡不出去了。
+func _set_world_rendering(on: bool) -> void:
+	var world := get_parent()
+	if world is Node3D:
+		world.visible = on
+	var player := _player if _player != null else _find_player()
+	if player != null and is_instance_valid(player):
+		# 玩家已经冻住了，没必要每帧跑一遍移动与贴地检测。
+		player.set_physics_process(on)
+
+
 func _build_case() -> void:
 	if _case != null:
 		return
@@ -149,6 +172,7 @@ func _build_case() -> void:
 		# 载不出来就别把玩家锁在黑屏里。
 		push_error("CaseTrigger: 找不到案件场景 " + CASE_SCENE)
 		_state = State.IDLE
+		_set_world_rendering(true)
 		_set_player_frozen(false)
 		_curtain.fade_in(0.2)
 		if _inside:
@@ -233,7 +257,7 @@ func _build_objective() -> Control:
 	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	holder.add_child(dot)
 
-	_objective_label = UIKit.readable(UIKit.meta("Objective — the metro entrance", 11, UIKit.FOG, 3))
+	_objective_label = UIKit.readable(UIKit.meta(Locale.t("hud.objective"), 11, UIKit.FOG, 3))
 	_objective_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	holder.add_child(_objective_label)
 
@@ -274,7 +298,7 @@ func _build_prompt() -> Control:
 
 	row.add_child(UIKit.keycap("E"))
 
-	_prompt_label = UIKit.readable(UIKit.label("Investigate the metro entrance", 15, UIKit.CHALK, UIKit.font_ui()))
+	_prompt_label = UIKit.readable(UIKit.label(Locale.t("hud.interact"), 15, UIKit.CHALK, UIKit.font_ui()))
 	_prompt_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(_prompt_label)
 
@@ -286,7 +310,7 @@ func _show_prompt(show_it: bool) -> void:
 	if _prompt == null:
 		return
 	if show_it:
-		_prompt_label.text = "Reopen the case file" if _completed else "Investigate the metro entrance"
+		_prompt_label.text = Locale.t("hud.reopen") if _completed else Locale.t("hud.interact")
 	if _prompt.visible == show_it:
 		return
 	if show_it:

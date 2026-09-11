@@ -2,12 +2,9 @@
   "case_id": "case_001",
   "code": "CASE 001",
   "title": "The 14-Second Video",
-  "title_zh": "14 秒地铁视频",
   "location": "Metro Entrance",
   "fiction_notice": "All people, accounts and events in this file are invented.",
-
   "investigation_points": 10,
-
   "post": {
     "platform": "STREAMLINE",
     "handle": "@citypulse_daily",
@@ -20,17 +17,13 @@
     "comments": "34K",
     "shares": "21K",
     "caption": "Have young people really forgotten how to respect their elders?",
-    "body": "Footage circulating tonight appears to show a young woman shouting at an elderly passenger on the eastbound platform. The clip has been shared more than twenty thousand times in six hours.",
+    "body": "Footage shows a young woman shouting at an elderly passenger on the eastbound platform.",
     "topic": "#StillwaterCorner",
     "placeholder_note": "Video placeholder"
   },
-
   "opening": {
-    "eyebrow": "NETWORK INCIDENT · METRO ENTRANCE",
-    "lede": "A clip is going around tonight. It runs for fourteen seconds and it has already been watched three million times.",
-    "instruction": "Before you investigate anything, record what you think right now. You will be asked again at the end, and the difference between the two answers is the point of the exercise."
+    "eyebrow": "NETWORK INCIDENT · METRO ENTRANCE"
   },
-
   "claim_for_intro": "B",
   "claims": [
     {
@@ -38,9 +31,13 @@
       "short": "Aggressive language",
       "text": "The woman used aggressive language toward the older passenger.",
       "verdict": "supported",
-      "verdict_accepts": ["supported"],
-      "decisive_evidence": ["E01"],
-      "explanation": "Evidence #01 shows the language directly, and nothing in the rest of the file contradicts it — including the longer recording, which captures the same raised voice. This is the one part of the viral framing that survives contact with the evidence.",
+      "verdict_accepts": [
+        "supported"
+      ],
+      "decisive_evidence": [
+        "E01"
+      ],
+      "explanation": "Evidence #01 records the language directly, and nothing here contradicts it — including the longer recording, which captures the same raised voice. This is the one part of the framing that survives contact with the evidence.",
       "note": "This claim is narrow on purpose. It says what happened, not why, and not what it means."
     },
     {
@@ -48,9 +45,14 @@
       "short": "Without provocation",
       "text": "The woman verbally attacked the older passenger without provocation.",
       "verdict": "unsupported",
-      "verdict_accepts": ["unsupported"],
-      "decisive_evidence": ["E04", "E08"],
-      "explanation": "The load-bearing word is “without provocation”. Evidence #04 and Evidence #08 both show the exchange was already underway before the recording began. The claim asserts more than the evidence can carry.",
+      "verdict_accepts": [
+        "unsupported"
+      ],
+      "decisive_evidence": [
+        "E04",
+        "E08"
+      ],
+      "explanation": "The load-bearing word is “without provocation”. #04 and #08 both show the exchange was already underway before the recording began. The claim reaches further than the record.",
       "note": "Unsupported is not the same as false. The evidence does not show the woman behaved well; it shows this particular claim reaches further than the record."
     },
     {
@@ -58,9 +60,11 @@
       "short": "Her character",
       "text": "This incident shows the woman is a generally ill-mannered person.",
       "verdict": "insufficient",
-      "verdict_accepts": ["insufficient"],
+      "verdict_accepts": [
+        "insufficient"
+      ],
       "decisive_evidence": [],
-      "explanation": "One recorded minute can support a statement about what someone did. It cannot support a statement about who someone is. This is a jump from behaviour to character, and no amount of footage of this single argument closes it.",
+      "explanation": "One recorded minute can support a statement about what someone did. It cannot support a statement about who someone is.",
       "note": "Watch for the moment a single action is quietly promoted into a description of a person."
     },
     {
@@ -68,70 +72,73 @@
       "short": "A generation",
       "text": "This incident shows young people are becoming less respectful toward their elders.",
       "verdict": "unsupported",
-      "verdict_accepts": ["unsupported", "insufficient"],
+      "verdict_accepts": [
+        "unsupported",
+        "insufficient"
+      ],
       "decisive_evidence": [],
-      "explanation": "One encounter cannot describe a generation. The claim steps from a single case to an entire age group — a move the evidence cannot make regardless of what the clip shows. Both “unsupported” and “not enough evidence” are defensible readings of the same failure.",
+      "explanation": "One encounter cannot describe a generation. That step — from a single case to an entire age group — is one the evidence cannot make, whatever the clip shows.",
       "note": "This is the same error as Claim C, one order of magnitude larger."
     }
   ],
-
-  "judgment_labels": {
-    "supported": {
-      "label": "Supported",
-      "meaning": "The evidence establishes this."
-    },
-    "suspicious": {
-      "label": "Suspicious",
-      "meaning": "Something here does not hold together."
-    },
-    "unsupported": {
-      "label": "Unsupported",
-      "meaning": "The evidence does not carry this."
-    },
-    "insufficient": {
-      "label": "Not Enough Evidence",
-      "meaning": "The file cannot answer this either way."
-    }
-  },
-
   "classification": {
-    "relevance": ["Direct", "Indirect", "Weak"],
-    "kind": ["Evidence", "Interpretation", "Opinion", "Speculation"]
+    "relevance": [
+      "Direct",
+      "Indirect",
+      "Weak"
+    ],
+    "kind": [
+      "Evidence",
+      "Interpretation",
+      "Opinion",
+      "Speculation"
+    ]
   },
-
   "sources": [
     {
       "id": "original_post",
       "label": "Original Post",
-      "note": "Where the clip first appeared tonight",
-      "evidence": ["E01", "E02"]
+      "note": "Where the clip first appeared",
+      "evidence": [
+        "E01",
+        "E02"
+      ]
     },
     {
       "id": "uploader",
       "label": "Uploader Profile",
-      "note": "Who published it, and what they usually publish",
-      "evidence": ["E03"]
+      "note": "What this account usually posts",
+      "evidence": [
+        "E03"
+      ]
     },
     {
       "id": "other_recordings",
       "label": "Other Recordings",
-      "note": "Footage captured by other people on the platform",
-      "evidence": ["E04"]
+      "note": "What other people filmed",
+      "evidence": [
+        "E04"
+      ]
     },
     {
       "id": "accounts",
       "label": "Direct Accounts",
-      "note": "Statements from people who were standing there",
-      "evidence": ["E05", "E06"]
+      "note": "From people who were standing there",
+      "evidence": [
+        "E05",
+        "E06"
+      ]
     },
     {
       "id": "official",
       "label": "Official Records",
-      "note": "Station staff and continuous camera coverage",
-      "evidence": ["E07", "E08"]
+      "note": "Staff records and station cameras",
+      "evidence": [
+        "E07",
+        "E08"
+      ]
     }
   ],
-
   "evidence": [
     {
       "id": "E01",
@@ -144,21 +151,21 @@
       "relevance_answer": "Direct",
       "reliability": "High — for what is visible",
       "context": "Low",
-      "summary": "The clip that started it. Fourteen seconds, no beginning and no end.",
+      "summary": "The clip that started it. Fourteen seconds, no beginning, no end.",
       "body": [
-        "The recording begins mid-shout. A woman in her early twenties is standing close to an older man on the platform. Her voice is raised and the words are unmistakably hostile.",
-        "The man does not step back. He says something the microphone does not pick up. The clip ends before he finishes the sentence."
+        "The recording begins mid-shout. A woman in her early twenties stands close to an older man. Her voice is raised and the words are unmistakably hostile.",
+        "The man does not step back. He says something the microphone does not pick up. The clip ends before he finishes."
       ],
       "proves": [
-        "The woman did use aggressive, insulting language.",
-        "The two were standing within arm’s reach of each other."
+        "The woman used aggressive, insulting language.",
+        "The two were within arm’s reach of each other."
       ],
       "does_not_prove": [
-        "What was said or done in the minute before the recording started.",
+        "What was said or done before the recording started.",
         "Who started the exchange.",
-        "Anything about the woman beyond this one moment."
+        "Anything about the woman beyond this moment."
       ],
-      "analyst": "Evidence #01 shows a woman speaking to an older man in a raised, hostile voice. That much is directly visible and does not depend on anyone’s account of it. What it cannot show is what came before the recording began: the clip has no start, and the first thing it captures is already a reaction.",
+      "analyst": "Everything visible here is directly recorded — it does not depend on anyone’s account. What it cannot show is what came before: the clip has no start, and the first thing it captures is already a reaction.",
       "hook": "Notice that the clip has no beginning. Whatever started this happened off-camera."
     },
     {
@@ -175,7 +182,7 @@
       "summary": "The sentence the uploader wrapped around the footage.",
       "body": [
         "Posted with the video: “Have young people really forgotten how to respect their elders?”",
-        "Nothing in the caption describes the platform, the people, or the argument. It describes what the uploader wants the clip to mean."
+        "It describes the platform, the people and the argument nowhere. It describes what the uploader wants the clip to mean."
       ],
       "proves": [
         "The uploader had a preferred reading of their own footage."
@@ -184,7 +191,7 @@
         "Anything about what happened on the platform.",
         "Whether the uploader believes the framing or is simply using it."
       ],
-      "analyst": "This is not a record of the event. It is a sentence someone wrote about the event. Filing it as evidence quietly imports the uploader’s conclusion into your file before you have tested anything — which is exactly the manoeuvre the whole incident is built on.",
+      "analyst": "This is not a record of the event. It is a sentence someone wrote about the event. File it as evidence and you import the uploader’s conclusion before testing anything — which is the manoeuvre the whole incident is built on.",
       "hook": "A caption is a claim about evidence. It is not evidence."
     },
     {
@@ -200,19 +207,19 @@
       "context": "Medium",
       "summary": "Who posted it, and what they post the rest of the week.",
       "body": [
-        "The account publishes confrontational footage several times a week — brief, unresolved, and consistently without context.",
-        "Posts built around outrage reach roughly four times the engagement of the account’s calmer material. The pattern holds for months."
+        "The account publishes confrontational footage several times a week — brief, unresolved, consistently without context.",
+        "Outrage-framed posts pull roughly four times the engagement of its calmer material. The pattern holds for months."
       ],
       "proves": [
-        "The account has a steady commercial interest in outrage framing.",
-        "Short, context-free clips are this account’s standard format, not an exception."
+        "The account has a commercial interest in outrage framing.",
+        "Short, context-free clips are its standard format, not an exception."
       ],
       "does_not_prove": [
-        "That this particular clip was altered.",
-        "That the events shown in it did not happen."
+        "That this clip was altered.",
+        "That the events in it did not happen."
       ],
-      "analyst": "The account’s history tells you about the account, not about the platform. A pattern of outrage-framed posts is a reason to look more carefully at the clip — it is not, by itself, a reason to disbelieve it. Motivation to frame is not evidence of fabrication.",
-      "hook": "You can distrust the poster and still accept the footage. Those are two separate questions."
+      "analyst": "A history of outrage framing is a reason to look harder at the clip. It is not, by itself, a reason to disbelieve it. Motivation to frame is not evidence of fabrication.",
+      "hook": "You can distrust the poster and still accept the footage. Two separate questions."
     },
     {
       "id": "E04",
@@ -227,19 +234,19 @@
       "context": "High",
       "summary": "A second recording, from before the clip began.",
       "body": [
-        "Another passenger was filming the platform before the viral clip started. In the earlier footage the man turns toward the woman and speaks to her at length.",
-        "By the time the fourteen-second clip would have begun, the exchange is already heated. Both voices are up."
+        "Another passenger was already filming. In the earlier footage the man turns toward the woman and speaks to her at length.",
+        "By the time the fourteen-second clip begins, the exchange is already heated. Both voices are up."
       ],
       "proves": [
-        "An argument was already underway before the viral clip started.",
+        "The argument was already underway before the viral clip started.",
         "The woman’s raised voice is a response, not the opening move."
       ],
       "does_not_prove": [
-        "That the woman’s language was acceptable.",
-        "What the argument was actually about.",
+        "That her language was acceptable.",
+        "What the argument was about.",
         "Who was in the right."
       ],
-      "analyst": "This is the first material in the file that reaches behind the viral clip. It shows the exchange already in progress before the fourteen seconds begin, which means the clip captured the middle of an argument rather than its start. That single fact does more work than everything else in this file combined.",
+      "analyst": "The first material in the file that reaches behind the viral clip. The clip captured the middle of an argument, not its start — one fact that does more work than everything else here combined.",
       "hook": "The clip was not edited. It was simply too short — and that is often enough."
     },
     {
@@ -266,8 +273,8 @@
         "That her account is accurate.",
         "That her response was proportionate to whatever preceded it."
       ],
-      "analyst": "A first-person account, and genuinely relevant — she is the only person who can describe what she experienced. She is also the person most affected by how this is judged, so her account is a claim to be tested rather than a fact to be filed. Note what she does not do: she does not deny the clip.",
-      "hook": "Testimony is evidence. It is not automatically true, and it is not automatically false."
+      "analyst": "Genuinely relevant — she is the only person who can describe what she experienced, and also the person most affected by how this is judged. So it is a claim to test, not a fact to file. Note what she does not do: she does not deny the clip.",
+      "hook": "Testimony is evidence. It is not automatically true, and not automatically false."
     },
     {
       "id": "E06",
@@ -282,8 +289,8 @@
       "context": "Medium",
       "summary": "Someone else who was standing there.",
       "body": [
-        "A passenger waiting roughly two metres away says the two had been arguing for about a minute before anyone started filming.",
-        "They add a detail the woman’s own statement leaves out: that the man was shouting too."
+        "A passenger waiting two metres away says the two had been arguing for about a minute before anyone started filming.",
+        "They add a detail the woman’s statement leaves out: the man was shouting too."
       ],
       "proves": [
         "The argument predates the recording.",
@@ -294,7 +301,7 @@
         "What the argument was about.",
         "Whether either account of the dispute is accurate."
       ],
-      "analyst": "An independent account from someone with no visible stake in the outcome. It corroborates the existence of an argument before the recording, and it adds something the woman’s statement does not — that both people were shouting. A witness who contradicts the person they are supporting is usually worth more attention than one who does not.",
+      "analyst": "An independent account from someone with no visible stake. It corroborates the argument and adds what the woman’s statement leaves out. A witness who contradicts the person they are supporting is usually worth more attention than one who does not.",
       "hook": "This witness helps the woman and still contradicts part of her account."
     },
     {
@@ -311,7 +318,7 @@
       "summary": "What staff recorded when they reached the platform.",
       "body": [
         "Staff were called after the argument drew attention. Their note records both parties as highly agitated on arrival, with no physical contact.",
-        "It does not attempt to establish who began the argument, and it does not repeat either party’s account of it."
+        "It does not attempt to establish who began it, and it does not repeat either party’s account."
       ],
       "proves": [
         "Both parties were agitated when staff arrived.",
@@ -321,7 +328,7 @@
         "Who started the argument.",
         "What was said before staff arrived."
       ],
-      "analyst": "An official record of what staff found on arrival, rather than of how the incident began. Its value here is mostly what it rules out — no physical contact — and its honesty about what it cannot say. A record that declines to assign blame is not a useless record.",
+      "analyst": "A record of what staff found on arrival, not of how the incident began. Its value is mostly what it rules out — no physical contact — and its honesty about what it cannot say.",
       "hook": "Authority does not make a document decisive. It only makes it a document."
     },
     {
@@ -338,11 +345,11 @@
       "summary": "The station’s own cameras, covering the whole minute.",
       "body": [
         "Station cameras cover the platform continuously, so this record does not depend on when anyone chose to start recording.",
-        "The summary shows the man speaking to the woman first and at length; the woman responding; both raising their voices; and no physical contact at any point."
+        "The summary shows the man speaking to the woman first and at length; the woman responding; both raising their voices; no physical contact at any point."
       ],
       "proves": [
         "The man spoke to the woman first.",
-        "The conflict ran for roughly a minute before the clip began.",
+        "The conflict ran about a minute before the clip began.",
         "Both raised their voices. Neither touched the other."
       ],
       "does_not_prove": [
@@ -350,34 +357,44 @@
         "Whether either person behaved reasonably overall.",
         "What either of them is like outside this minute."
       ],
-      "analyst": "The most complete record in the file. Because the coverage is continuous, it does not inherit the central weakness of Evidence #01 — that someone decided when to start filming. When a record is not shaped by a choice, it stops being a piece of framing and starts being a piece of evidence.",
-      "hook": "This is as close to the whole minute as this file will get."
+      "analyst": "The most complete record here. Because coverage is continuous, it does not inherit Evidence #01’s central weakness — that someone decided when to start filming. When a record is not shaped by a choice, it stops being framing and starts being evidence.",
+      "hook": "As close to the whole minute as this file will get."
     }
   ],
-
   "gaps": [
     {
       "id": "longer_recording",
-      "requires_any": ["E04", "E08"],
-      "message": "You have examined short-form material only. No longer or continuous recording of the incident has been reviewed, so everything you hold comes from footage someone chose when to start."
+      "requires_any": [
+        "E04",
+        "E08"
+      ],
+      "message": "Everything you hold comes from footage someone chose when to start. No longer or continuous recording has been reviewed."
     },
     {
       "id": "firsthand",
-      "requires_any": ["E05", "E06"],
-      "message": "You have footage but not accounts. No statement from anyone who was standing on that platform — including the woman herself — is in your file."
+      "requires_any": [
+        "E05",
+        "E06"
+      ],
+      "message": "You have footage but no accounts. No statement from anyone who was standing on that platform is in your file."
     },
     {
       "id": "source_check",
-      "requires_any": ["E03", "E02"],
-      "message": "You have not looked at who published this or why. Framing is not evidence, but an unexamined frame is a gap in the record."
+      "requires_any": [
+        "E03",
+        "E02"
+      ],
+      "message": "You have not looked at who published this or why. Framing is not evidence, but an unexamined frame is a gap."
     },
     {
       "id": "official",
-      "requires_any": ["E07", "E08"],
-      "message": "No official account of the incident has been reviewed. Staff records are rarely decisive, but they are usually honest about their own limits."
+      "requires_any": [
+        "E07",
+        "E08"
+      ],
+      "message": "No official account has been reviewed. Staff records are rarely decisive, but they are usually honest about their own limits."
     }
   ],
-
   "challenges": {
     "A": {
       "supported": "Let us test the edges. Which single piece of evidence would you remove to make this claim fail, and would removing it change what the clip shows?",
@@ -404,25 +421,24 @@
       "insufficient": "Which is it — not enough evidence, or evidence that cannot apply at this scale?"
     }
   },
-
   "debrief": {
     "title": "Reasoning Debrief",
-    "lede": "This page is not a score. It is a record of how your reading of the incident changed, and why.",
+    "lede": "Not a score. A record of how your reading changed, and why.",
     "patterns": {
       "context": {
         "label": "Context Awareness",
-        "good": "You went looking behind the clip on your own. The decisive material in this file was not in the post.",
-        "weak": "The file’s decisive material sat behind a second recording that the post never mentions. It went unexamined."
+        "good": "You went behind the clip on your own. The decisive material was never in the post.",
+        "weak": "The decisive material sat behind a second recording the post never mentions. It went unexamined."
       },
       "overgeneralisation": {
         "label": "Overgeneralisation",
         "good": "You kept claims about a person, and about a generation, separate from claims about one evening.",
-        "weak": "At least one judgment allowed a single incident to stand in for a person or an age group."
+        "weak": "At least one judgment let a single incident stand in for a person, or for an age group."
       },
       "premature": {
         "label": "Premature Judgment",
         "good": "Your confidence moved with the evidence rather than ahead of it.",
-        "weak": "You recorded high confidence before the file could have supported it. Certainty that arrives early usually has to be revised later."
+        "weak": "You recorded high confidence before the file could support it. Certainty that arrives early usually has to be revised later."
       }
     },
     "closing": "The clip was not faked. Nobody edited it. It was simply too short, published to be shared, and read as though it were the whole minute.",

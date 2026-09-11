@@ -28,6 +28,9 @@ func _build() -> void:
 func scroll_column(width: int = UIKit.WIDE) -> VBoxContainer:
 	var scroll := ScrollContainer.new()
 	scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
+	# 右边留 16px 给滚动条。不留的话，滚动条会贴死在窗口最右边一像素，
+	# 看起来不像一个控件，像一个渲染瑕疵。
+	scroll.offset_right = -16.0
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.follow_focus = true
 	UIKit.style_scroll(scroll)
@@ -92,25 +95,38 @@ func section(text: String, color: Color = UIKit.SLATE) -> Control:
 ## 返回 [控件, 取值函数]，取值函数在需要提交时调用。
 func confidence_row(initial: int, on_change: Callable = Callable()) -> Array:
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 2)
 
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 10)
-	box.add_child(head)
-	var caption := UIKit.meta("confidence", 10, UIKit.SLATE, 2)
+	# 一行装完：标签、滑条、读数。
+	# 三者挨在一起才读得出"这一条是调什么用的"；读数先前被甩到整行最右端，
+	# 和滑条隔了半个屏幕，眼睛得来回跑一趟才把它们连起来。
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	box.add_child(row)
+
+	var caption := UIKit.meta(Locale.t("common.confidence"), 10, UIKit.MUTED, 2)
 	caption.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	head.add_child(caption)
-	head.add_child(UIKit.fill(UIKit.hgap(0)))
-	var readout := UIKit.label("%d%%" % initial, 22, UIKit.LAMP, UIKit.tracked(UIKit.font_mono(), 0))
-	readout.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	head.add_child(readout)
+	row.add_child(caption)
 
 	var slider := ConfidenceSlider.new()
 	slider.value = initial
-	box.add_child(slider)
+	slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(slider)
+	# 在 add_child 之后设尺寸：ConfidenceSlider 的 _ready 会覆盖 custom_minimum_size。
+	slider.custom_minimum_size = Vector2(200, 28)
+
+	# 读数刻意做小、做暗。它回答的是"你有多确定"——一个次要问题。
+	# 原先它是 22px 的暖黄大数字，比上面四个判定按钮加起来还抢眼，
+	# 于是整页读起来的重点是"51%"而不是"我选了什么"。那是反的。
+	var readout := UIKit.label("%d%%" % initial, 14, UIKit.SLATE,
+		UIKit.tracked(UIKit.font_mono(), 0))
+	readout.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(readout)
+
+	row.add_child(UIKit.fill(UIKit.hgap(0)))
 
 	slider.changed.connect(func(v: int) -> void:
 		readout.text = "%d%%" % v
+		readout.add_theme_color_override("font_color", UIKit.FOG if v != 50 else UIKit.SLATE)
 		if on_change.is_valid():
 			on_change.call(v))
 

@@ -38,16 +38,15 @@ func _build() -> void:
 	head.add_theme_constant_override("separation", 8)
 	add_child(head)
 	head.add_child(_status_dot())
-	var title := UIKit.label("Analyst", 15, UIKit.CYAN, UIKit.font_ui())
+	var title := UIKit.label(Locale.t("analyst.title"), 15, UIKit.CYAN, UIKit.font_ui())
 	title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(title)
 	head.add_child(UIKit.fill(UIKit.hgap(0)))
-	var cost := UIKit.meta("%d IP / CONSULT" % COST, 10, UIKit.SLATE, 2)
+	var cost := UIKit.meta(Locale.tf("analyst.cost", [COST]), 10, UIKit.SLATE, 2)
 	cost.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(cost)
 
-	var blurb := UIKit.paragraph(
-		"Reads only what you have opened. It will not tell you the answer.", 12,
+	var blurb := UIKit.paragraph(Locale.t("analyst.blurb"), 12,
 		Color(UIKit.SLATE.r, UIKit.SLATE.g, UIKit.SLATE.b, 0.95))
 	add_child(blurb)
 
@@ -55,10 +54,10 @@ func _build() -> void:
 
 	# ── 四个固定动作 ──────────────────────────────────────
 	var actions := [
-		["explain", "Explain this evidence"],
-		["not_prove", "What this does NOT prove"],
-		["challenge", "Challenge my judgment"],
-		["missing", "What am I missing?"],
+		["explain", Locale.t("analyst.a.explain")],
+		["not_prove", Locale.t("analyst.a.not_prove")],
+		["challenge", Locale.t("analyst.a.challenge")],
+		["missing", Locale.t("analyst.a.missing")],
 	]
 	for pair in actions:
 		var b := UIKit.ghost_button(pair[1])
@@ -71,7 +70,7 @@ func _build() -> void:
 
 	# ── 回答区 ────────────────────────────────────────────
 	_empty_hint = UIKit.slot_panel(14)
-	_empty_hint.add_child(UIKit.meta("no question asked yet", 10, UIKit.INK4, 2))
+	_empty_hint.add_child(UIKit.meta(Locale.t("analyst.empty"), 10, UIKit.INK4, 2))
 	add_child(_empty_hint)
 
 	_response_box = UIKit.slot_panel(14)
@@ -147,7 +146,7 @@ func _run(action: String) -> void:
 
 		"not_prove":
 			var e := CaseData.evidence(data, evidence_id)
-			var lines := "Nothing in this card establishes the following:\n"
+			var lines := Locale.t("analyst.not_prove_head") + "\n"
 			for item in e.get("does_not_prove", []):
 				lines += "\n— " + str(item)
 			_answer(lines, [evidence_id])
@@ -155,14 +154,14 @@ func _run(action: String) -> void:
 		"challenge":
 			var text := CaseData.challenge(data, focused_claim, _judgment())
 			if text == "":
-				text = "No counter-argument is available for this combination yet."
+				text = Locale.t("analyst.none")
 			# 挑战只引用玩家已经打开的证据，绝不替玩家补证据。
 			_answer(text, CaseState.unlocked.duplicate())
 
 		"missing":
 			var gap := CaseData.first_gap(data, CaseState.unlocked)
 			if gap.is_empty():
-				_answer("Every category in this file has been opened. The remaining question is not what else exists, but what the record can actually support.", CaseState.unlocked.duplicate())
+				_answer(Locale.t("analyst.all_open"), CaseState.unlocked.duplicate())
 			else:
 				_answer(str(gap.get("message", "")), CaseState.unlocked.duplicate())
 
@@ -175,7 +174,7 @@ func _answer(text: String, basis: Array) -> void:
 	_response_box.visible = true
 	for child in _basis_row.get_children():
 		child.queue_free()
-	_basis_row.add_child(UIKit.meta("Based on", 9, UIKit.INK4, 2))
+	_basis_row.add_child(UIKit.meta(Locale.t("analyst.based"), 9, UIKit.INK4, 2))
 	for id in basis:
 		if str(id) == "":
 			continue
@@ -183,7 +182,7 @@ func _answer(text: String, basis: Array) -> void:
 	if basis.is_empty():
 		_basis_row.add_child(UIKit.tag("—", UIKit.INK4))
 	_response_text.text = text
-	_footer.text = "LOCAL REASONING · %d OF %d EVIDENCE OPENED" % [CaseState.unlocked.size(), 8]
+	_footer.text = Locale.tf("analyst.footer", [CaseState.unlocked.size(), 8])
 
 	# 一次很轻的淡入。回答是"出现"的，不是"弹出来"的。
 	_response_box.modulate = Color(1, 1, 1, 0)

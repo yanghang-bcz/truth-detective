@@ -26,3 +26,10 @@ blender/renders/
 # Python 字节码（建模脚本以 Blender 内置解释器运行，可能留下缓存）
 __pycache__/
 *.pyc
+
+# 截图产物：由 tools/shot_*.gd 生成，不需要进版本库也不需要被 Godot 导入
+previews/*.png
+previews/*.png.import
+previews/case/
+previews/case_zh/
+previews/video/

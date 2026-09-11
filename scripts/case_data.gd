@@ -6,6 +6,17 @@ extends RefCounted
 ## 重写游戏，只需要换一份数据 —— 这个项目要证明的是"能承载多个案件的系统"，
 ## 不是"做死一个关卡"。
 
+## 按语言加载案件。中文版是 data/case_001.zh.json；缺了就退回英文 ——
+## 缺翻译的时候看到英文，比看到一片空白好。
+## 语言不从 Locale 直接读：这个函数要能在 headless 工具里跑，
+## 而 --script 模式下 autoload 是不注册的，引用 Locale 会直接编译失败。
+static func load_localized(case_id: String, lang: String) -> Dictionary:
+	var localized := "res://data/%s.%s.json" % [case_id, lang]
+	if lang != "en" and FileAccess.file_exists(localized):
+		return load_case(localized)
+	return load_case("res://data/%s.json" % case_id)
+
+
 ## 读一份案件。返回的字典里会额外挂两个索引（下划线开头）：
 ##   _evidence: id -> 证据字典
 ##   _claims:   id -> Claim 字典
