@@ -72,6 +72,10 @@ case "${1:-}" in
     run_script test_player.gd | grep -E "^(PASS|FAIL)" || true
     echo "== 场景校验 =="
     run_script validate_scene.gd | grep -E "^(PASS|ERROR)" || true
+    echo "== 地铁口触发冒烟测试（地铁口 → [E] → 案件 → 关闭 → 回到街上）=="
+    # 这一条必须用场景方式跑：--script 模式不注册 autoload，引用 CaseState 会编译失败。
+    "$GODOT" --path "$PROJECT_DIR" res://tools/test_case_trigger.tscn \
+      | grep -E "^(PASS|FAIL|NOTE|CASE_TRIGGER)" || true
     ;;
   --bench)
     "$GODOT" --path "$PROJECT_DIR" --resolution 1280x800 --script res://tools/bench.gd | grep -E "^BENCH" || true

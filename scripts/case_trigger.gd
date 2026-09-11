@@ -16,8 +16,12 @@ const CASE_SCENE := "res://scenes/cases/case_001/case_001.tscn"
 const TRIGGER_CENTER := Vector3(-4.8, 0.9, 9.7)
 const TRIGGER_SIZE := Vector3(3.6, 2.6, 2.6)
 
+## 进出案件的方向必须自己记住。Curtain 只会报告"黑透了"和"亮透了"，
+## 它不知道这是打开的中场还是关闭的中场 —— 而这两件事要做的事刚好相反。
+enum State { IDLE, OPENING, OPEN, CLOSING }
+
 var _inside := false
-var _busy := false
+var _state: int = State.IDLE
 var _completed := false
 var _player: CharacterBody3D
 
@@ -65,8 +69,11 @@ func _ensure_input_actions() -> void:
 	if not InputMap.action_has_event("interact", key):
 		InputMap.action_add_event("interact", key)
 
+func _is_busy() -> bool:
+	return _state != State.IDLE
+
 func _input(event: InputEvent) -> void:
-	if _busy or not _inside:
+	if _is_busy() or not _inside:
 		return
 	if event.is_action_pressed("interact"):
 		get_viewport().set_input_as_handled()
@@ -77,7 +84,7 @@ func _on_body_entered(body: Node3D) -> void:
 		return
 	_player = body
 	_inside = true
-	if not _busy:
+	if not _is_busy():
 		_show_prompt(true)
 
 func _on_body_exited(body: Node3D) -> void:
@@ -90,15 +97,45 @@ func _on_body_exited(body: Node3D) -> void:
 #  进入 / 退出案件
 # ─────────────────────────────────────────────────────────────
 func _open_case() -> void:
-	if _busy:
+	if _is_busy():
 		return
-	_busy = true
+	_state = State.OPENING
 	_show_prompt(false)
 	_set_player_frozen(true)
 	_curtain.fade_out(0.34)
 
 
+## 全黑。此时屏幕被挡住，建/拆案件层都不会被玩家看到闪动。
 func _on_curtain_covered() -> void:
+	match _state:
+		State.OPENING:
+			_build_case()
+			_curtain.fade_in(0.38)
+		State.CLOSING:
+			_teardown_case()
+			_curtain.fade_in(0.32)
+		_:
+			pass
+
+
+## 全亮。这里才是「这个方向真正走完了」的时刻。
+func _on_curtain_cleared() -> void:
+	match _state:
+		State.OPENING:
+			# 案件已经露出来了 —— 从这里开始才算「开着」，
+			# 才允许 _close_case 生效。
+			_state = State.OPEN
+		State.CLOSING:
+			_state = State.IDLE
+			_objective.visible = false
+			_set_player_frozen(false)
+			if _inside:
+				_show_prompt(true)
+		_:
+			pass
+
+
+func _build_case() -> void:
 	if _case != null:
 		return
 	CaseState.start()
@@ -109,31 +146,32 @@ func _on_curtain_covered() -> void:
 
 	var packed: PackedScene = load(CASE_SCENE)
 	if packed == null:
+		# 载不出来就别把玩家锁在黑屏里。
 		push_error("CaseTrigger: 找不到案件场景 " + CASE_SCENE)
-		_close_case()
+		_state = State.IDLE
+		_set_player_frozen(false)
+		_curtain.fade_in(0.2)
+		if _inside:
+			_show_prompt(true)
 		return
 	_case = packed.instantiate()
 	_case_layer.add_child(_case)
 	_case.closed.connect(_close_case)
-	_curtain.fade_in(0.38)
 
 
 func _close_case() -> void:
-	if _case == null:
+	if _state != State.OPEN:
 		return
+	_state = State.CLOSING
 	_curtain.fade_out(0.32)
 
-func _on_curtain_cleared() -> void:
-	if _case != null:
+
+func _teardown_case() -> void:
+	if _case_layer != null and is_instance_valid(_case_layer):
 		_case_layer.queue_free()
-		_case_layer = null
-		_case = null
-		_completed = true
-		_objective.visible = false
-	_set_player_frozen(false)
-	_busy = false
-	if _inside:
-		_show_prompt(true)
+	_case_layer = null
+	_case = null
+	_completed = true
 
 func _set_player_frozen(frozen: bool) -> void:
 	var player := _player if _player != null else _find_player()

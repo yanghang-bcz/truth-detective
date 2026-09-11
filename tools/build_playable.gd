@@ -71,14 +71,19 @@ func build() -> void:
 	trigger.collision_layer = 0
 	trigger.collision_mask = 1
 	trigger.monitorable = false
+	# 先入树再设 owner。owner 必须是"树上的祖先"，而 trigger 在入树之前，
+	# world 对它来说还不是祖先 —— 先设 owner 会报 Invalid owner，
+	# 结果是 CollisionShape3D 拿不到 owner、打包时被丢掉，
+	# 场景里的 Area3D 会变成一个永远触发不了的空壳。
+	world.add_child(trigger)
+	trigger.owner = world
+
 	var trigger_shape := CollisionShape3D.new()
 	var trigger_box := BoxShape3D.new()
 	trigger_box.size = Vector3(3.6, 2.6, 2.6)
 	trigger_shape.shape = trigger_box
 	trigger.add_child(trigger_shape)
 	trigger_shape.owner = world
-	world.add_child(trigger)
-	trigger.owner = world
 	var packed := PackedScene.new()
 	packed.pack(world)
 	ResourceSaver.save(packed,"res://scenes/playable_neighborhood.tscn")
