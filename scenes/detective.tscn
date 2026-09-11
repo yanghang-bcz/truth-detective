@@ -1,0 +1,19 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/detective.gd" id="1_we816"]
+[ext_resource type="PackedScene" path="res://assets/characters/detective.glb" id="2_5gryu"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_768kb"]
+radius = 0.23
+height = 1.5
+
+[node name="Detective" type="CharacterBody3D"]
+script = ExtResource("1_we816")
+
+[node name="Visual" type="Node3D" parent="."]
+
+[node name="detective" type="Node3D" parent="Visual" instance=ExtResource("2_5gryu")]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+shape = SubResource("CapsuleShape3D_768kb")

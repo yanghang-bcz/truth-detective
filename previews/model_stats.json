@@ -1,0 +1,11 @@
+{
+  "triangles": 2740,
+  "height_m": 1.598,
+  "bones": 7,
+  "animations": [
+    "Idle",
+    "Walk",
+    "Run"
+  ],
+  "source": "Kenney Blocky Characters 2.0 character-a, CC0"
+}

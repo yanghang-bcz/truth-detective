@@ -1,0 +1,12 @@
+PASS Spawn grounded on street: (0.0, 0.080078, 2.0)
+PASS All three animation clips
+PASS Screen movement (-1.0, 0.0)
+PASS Screen movement (1.0, 0.0)
+PASS Screen movement (0.0, -1.0)
+PASS Screen movement (0.0, 1.0)
+PASS Run faster than walk
+PASS Step onto kerb and pavement (4.540805, 0.440934, 4.5)
+PASS Diner wall blocks passage (-10.8, 0.080827, -1.213711)
+PASS Map boundary collision
+PASS Returns to Idle
+PASS Fall recovery
