@@ -62,6 +62,23 @@ func build() -> void:
 	player.position = Vector3(0, .15, 2)
 	world.add_child(player)
 	player.owner = world
+	# 地铁口的案件触发区。放在可玩层而不是 build_scene.gd 里，是为了让基础街区
+	# （neighborhood.tscn）保持纯几何：玩法对象只在 playable 场景里出现。
+	var trigger := Area3D.new()
+	trigger.name = "MetroEntranceTrigger"
+	trigger.set_script(load("res://scripts/case_trigger.gd"))
+	trigger.position = Vector3(-4.8, 0.9, 9.7)
+	trigger.collision_layer = 0
+	trigger.collision_mask = 1
+	trigger.monitorable = false
+	var trigger_shape := CollisionShape3D.new()
+	var trigger_box := BoxShape3D.new()
+	trigger_box.size = Vector3(3.6, 2.6, 2.6)
+	trigger_shape.shape = trigger_box
+	trigger.add_child(trigger_shape)
+	trigger_shape.owner = world
+	world.add_child(trigger)
+	trigger.owner = world
 	var packed := PackedScene.new()
 	packed.pack(world)
 	ResourceSaver.save(packed,"res://scenes/playable_neighborhood.tscn")
