@@ -1,0 +1,30 @@
+{
+  "//": "工程级 VS Code 配置。不含任何绝对路径，换机器也能用。",
+  "files.associations": {
+    "*.gd": "gdscript",
+    "*.gdshader": "gdshader",
+    "*.gdshaderinc": "gdshader",
+    "*.tscn": "ini",
+    "*.tres": "ini",
+    "*.godot": "ini"
+  },
+  "files.exclude": {
+    "**/.godot": true,
+    "**/*.import": true,
+    "**/*.uid": true,
+    "**/*.blend1": true
+  },
+  "search.exclude": {
+    "**/.godot": true,
+    "**/*.import": true,
+    "**/*.uid": true,
+    "**/*.blend1": true
+  },
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "[gdscript]": {
+    "editor.insertSpaces": false,
+    "editor.tabSize": 4,
+    "editor.detectIndentation": false
+  }
+}

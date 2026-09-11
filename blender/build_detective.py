@@ -1,7 +1,22 @@
-import bpy, math, json
+import bpy, math, json, os
 from mathutils import Vector, Matrix
 from pathlib import Path
-P=Path(globals().get('PROJECT_DIR', '/Users/emobcccz/.codex/.chatgpt-projects/g-p-69aed7ee2424819192fda2d3828aa78d/TruthDetective_Player'))
+
+def _project_dir():
+ # 工程目录不再写死。优先用显式传入的 PROJECT_DIR（全局变量或环境变量），
+ # 否则从脚本自身位置推导：<工程>/blender/build_detective.py 的上一级就是工程根目录。
+ # 这样工程搬到任何地方（本地、GitHub 目录、另一台机器）都不用改这个脚本。
+ for candidate in (globals().get('PROJECT_DIR'), os.environ.get('PROJECT_DIR')):
+  if candidate:
+   return Path(candidate).expanduser().resolve()
+ try:
+  return Path(__file__).resolve().parent.parent
+ except NameError:
+  # 从 Blender 的文本编辑器里直接运行时没有 __file__，退回 .blend 文件所在位置。
+  return Path(bpy.data.filepath).resolve().parent.parent
+
+P=_project_dir()
+print('PROJECT_DIR', P)
 bpy.ops.object.select_all(action='SELECT');bpy.ops.object.delete(use_global=False)
 bpy.ops.import_scene.fbx(filepath=str(P/'assets/characters/source/character-a.fbx'))
 for o in bpy.context.scene.objects:

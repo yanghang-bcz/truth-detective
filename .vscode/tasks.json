@@ -1,0 +1,61 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Godot: 打开编辑器",
+      "detail": "日常开发入口，用 ~/Applications/Godot.app 打开本工程",
+      "type": "shell",
+      "command": "./godot.sh",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Godot: 运行游戏",
+      "detail": "等于编辑器里按 F5",
+      "type": "shell",
+      "command": "./godot.sh --run",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Godot: 重建场景",
+      "detail": "重跑 build_scene.gd + build_playable.gd。改了生成脚本后必须执行",
+      "type": "shell",
+      "command": "./godot.sh --rebuild",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Godot: 玩法测试 + 场景校验",
+      "detail": "12 项玩法回归 + 场景结构断言。改碰撞体后必须执行",
+      "type": "shell",
+      "command": "./godot.sh --test",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Godot: 性能基准",
+      "detail": "force_draw 测真实帧耗时，不受垂直同步影响",
+      "type": "shell",
+      "command": "./godot.sh --bench",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Blender: 打开建模文件",
+      "detail": "打开 blender/detective.blend",
+      "type": "shell",
+      "command": "./blender.sh",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Blender: 重新导出侦探模型",
+      "detail": "无界面重跑 build_detective.py，导出 assets/characters/detective.glb",
+      "type": "shell",
+      "command": "./blender.sh --rebuild-detective",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    }
+  ]
+}

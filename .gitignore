@@ -15,3 +15,14 @@ export_credentials.cfg
 .mono/
 data_*/
 mono_crash.*.json
+
+# macOS
+.DS_Store
+
+# Blender 自动备份与渲染产物
+*.blend1
+blender/renders/
+
+# Python 字节码（建模脚本以 Blender 内置解释器运行，可能留下缓存）
+__pycache__/
+*.pyc
