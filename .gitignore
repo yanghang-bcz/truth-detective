@@ -31,6 +31,9 @@ __pycache__/
 config/local.env
 .env
 
+# Web 导出产物：由 godot --export-release 生成，可重复构建，不进版本库
+build/
+
 # 截图产物：由 tools/shot_*.gd 生成，不需要进版本库也不需要被 Godot 导入
 previews/*.png
 previews/*.png.import

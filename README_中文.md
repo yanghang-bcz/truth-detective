@@ -4,6 +4,11 @@
 
 [English README →](README.md)
 
+> **▶ 浏览器直接玩：[truth-detective.app.workbuddy.host](https://truth-detective.app.workbuddy.host/)**
+> 完整的 Case 001，不用装任何东西。Web 版不带 API key，分析员自动使用离线
+> 规则引擎——游戏本来就按"有没有 AI 都完整"设计。桌面版配上 DeepSeek key
+> 即可启用真模型。
+
 你是街区里的一名侦探。一段疯传的偷拍视频里，一个年轻女子似乎在地铁站台上
 对一位老人大发雷霆。你的任务不是判断视频"是不是真的"——它是真的。你的任务
 是判断**它到底撑得住故事的哪一层**，一层一层地来，并且抓住你的把握跑赢证据的
@@ -134,6 +139,20 @@ git clone https://github.com/yanghang-bcz/truth-detective.git
 
 操作：WASD / 方向键行走，Shift 奔跑，走到地铁口按 `E` 进入案件。
 案件界面右上角切换语言（EN / 中文）。
+
+### Web 版导出
+
+仓库自带 `export_presets.cfg`。Web 预设刻意**关闭线程支持**，这样构建产物
+在任意静态托管上都能跑（不需要 COOP/COEP 响应头）；排除过滤器把
+`config/local.env` 挡在包外——**你的 API key 不可能被打进发布的 `.pck`**。
+重新构建：
+
+```bash
+./godot.sh --headless --export-release "Web" build/web/index.html
+```
+
+已知的 Web 版差异：街区雾效 shader 只有 Forward+ 支持，WebGL2 下雾不渲染，
+其余完全一致。
 
 ### 启用 AI 分析员
 

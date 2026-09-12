@@ -4,6 +4,11 @@
 
 [中文 README →](README_中文.md)
 
+> **▶ Play in your browser: [truth-detective.app.workbuddy.host](https://truth-detective.app.workbuddy.host/)**
+> The full Case 001, no install. The web build ships without an API key, so the
+> Analyst runs on its offline rules engine — the game is designed to be complete
+> either way. Desktop build + a DeepSeek key unlocks the live model.
+
 You are a detective in a small 3D neighborhood. A viral clip shows a young woman
 apparently lashing out at an elderly man on a subway platform. Your job is not to
 decide whether the clip is "real" — it is. Your job is to decide **how much of the
@@ -144,6 +149,20 @@ git clone https://github.com/yanghang-bcz/truth-detective.git
 
 Controls: WASD / arrows to walk, Shift to run, `E` at the subway entrance to
 open the case. Language toggle (EN / 中文) is in the case screen's top bar.
+
+### Web export
+
+`export_presets.cfg` ships with the repo. The Web preset deliberately disables
+thread support so the build runs on any plain static host (no COOP/COEP headers
+needed), and its exclude filter keeps `config/local.env` — i.e. **your API key
+can never end up inside the published `.pck`**. Rebuild with:
+
+```bash
+./godot.sh --headless --export-release "Web" build/web/index.html
+```
+
+Known web-build difference: the neighborhood's fog shader is Forward+-only, so
+fog simply doesn't render under WebGL2. Everything else is identical.
 
 ### Enabling the AI Analyst
 
