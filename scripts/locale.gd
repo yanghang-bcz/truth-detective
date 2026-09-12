@@ -20,7 +20,24 @@ const LANGS: Array[String] = ["en", "zh"]
 var lang := "en"
 
 func _ready() -> void:
+	_register_cjk_fallback()
 	_push_judgment_names()
+
+
+## Web 导出版没有系统字体可用：font_ui() 里的 SF Pro / PingFang 在浏览器里
+## 一个都不存在，中文会变成一排空方块（tofu）。桌面端不受影响是因为 macOS
+## 有 PingFang 兜底。
+## 解法：工程内嵌思源黑体（OFL，见 ASSET_CREDITS.md），注册成**全局兜底字体**。
+## 只在"指定字体缺这个字"时才会被用到，所以桌面端外观完全不变，
+## Web 端拉丁字符继续走 Godot 内置字体，中文落到思源黑体。
+func _register_cjk_fallback() -> void:
+	const CJK_PATH := "res://assets/fonts/NotoSansCJKsc-Regular.otf"
+	if not ResourceLoader.exists(CJK_PATH):
+		push_warning("CJK fallback font missing: " + CJK_PATH)
+		return
+	var cjk: Font = load(CJK_PATH)
+	if cjk != null:
+		ThemeDB.fallback_font = cjk
 
 func set_lang(l: String) -> void:
 	if not DICT.has(l) or l == lang:
