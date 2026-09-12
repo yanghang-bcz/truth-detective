@@ -36,6 +36,14 @@ var _pending: Dictionary = {}
 
 func _ready() -> void:
 	CaseState.case_started.connect(_on_case_started)
+	# 开发期必须能一眼看出"现在到底是谁在答"。界面上的 footer 只有 9px，
+	# 而离线引擎的回答又刻意写得像分析员 —— 不靠日志区分，就是在猜。
+	if transport.is_valid():
+		print("[AiCoach] AI_PROVIDER=test-double")
+	elif AiConfig.has_key():
+		print("[AiCoach] AI_PROVIDER=deepseek model=%s" % AiConfig.MODEL)
+	else:
+		print("[AiCoach] AI_PROVIDER=fallback reason=no_key （离线规则引擎，调查不受影响）")
 
 
 # ─────────────────────────────────────────────────────────────
@@ -123,6 +131,8 @@ func ask(action: String, claim_id: String, evidence_id: String) -> void:
 	busy = true
 	_pending = {"action": action, "claim": claim_id, "evidence": evidence_id, "key": key}
 	state_changed.emit()
+	print("[AiCoach] -> deepseek action=%s claim=%s target=%s unlocked=%d" % [
+		action, claim_id, target, CaseState.unlocked.size()])
 	_send(AiPromptBuilder.system_prompt(Locale.lang),
 		AiPromptBuilder.user_prompt(ctx, Locale.lang, target),
 		_on_response)
@@ -180,6 +190,9 @@ func _deliver(action: String, claim: String, payload: Dictionary) -> void:
 	}
 	last_result = result
 	state_changed.emit()
+	print("[AiCoach] <- source=%s action=%s ok=%s tokens_left=%d failure=%s blocked=%s" % [
+		source, action, str(result["ok"]), CaseState.analyst_tokens,
+		result["failure"], result["blocked"]])
 	if not result["ok"]:
 		return
 

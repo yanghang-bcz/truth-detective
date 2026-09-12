@@ -28,7 +28,10 @@ Rules:
 const ACTION_INSTRUCTION := {
 	"explain": "Explain what the evidence with the target ID establishes. Stay strictly inside the information contained in it.",
 	"not_prove": "Explain which conclusions cannot reasonably be drawn from the evidence with the target ID.",
-	"challenge": "Identify the weakest assumption in the player's current reasoning. Do not tell them the correct answer.",
+	"challenge": """Stress-test the player's current judgment against the evidence actually listed in the context.
+First acknowledge what the listed evidence genuinely establishes in the player's direction; then name the weakest link between that evidence and the strength of the player's judgment or confidence — what does it still leave open?
+Never guess what the player is relying on, and never invent assumptions they have not stated. If the listed evidence genuinely points the same way as the player's judgment, do not manufacture disagreement: question whether the evidence is strong enough to carry their confidence instead.
+A good challenge makes the player's reasoning more precise, not more contrary. Never state the correct answer.""",
 	"missing": "Identify the single most important category of information the player has not looked at yet. Do not name evidence IDs that are not in the context.",
 }
 
