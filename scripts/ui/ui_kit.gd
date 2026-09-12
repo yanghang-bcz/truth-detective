@@ -70,7 +70,20 @@ static var _fonts := {}
 static func _cached(key: String, make: Callable) -> Font:
 	if not _fonts.has(key):
 		_fonts[key] = make.call()
+		_append_cjk_fallback(_fonts[key])
 	return _fonts[key]
+
+## Web 端没有系统字体。ThemeDB.fallback_font 在导出包里**不会**被当作缺字形
+## 兜底（实测所有取字路径都渲染成 codepoint 方框），可靠的兜底是
+## Font.fallbacks 数组。把内嵌思源黑体挂到每个基础字体后面：
+## 只在基础字体缺这个字时启用，桌面端外观不变。
+static func _append_cjk_fallback(f: Font) -> void:
+	const CJK_PATH := "res://assets/fonts/NotoSansCJKsc-Regular.otf"
+	if f == null or not ResourceLoader.exists(CJK_PATH):
+		return
+	var cjk: Font = load(CJK_PATH)
+	if cjk != null and not f.fallbacks.has(cjk):
+		f.fallbacks.append(cjk)
 
 ## 衬线大写，档案感。用于案件标题、Claim 原文。
 static func font_display() -> Font:

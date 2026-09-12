@@ -4,7 +4,7 @@
 
 [English README →](README.md)
 
-> **▶ 浏览器直接玩：[truth-detective.app.workbuddy.host](https://truth-detective.app.workbuddy.host/)**
+> **▶ 浏览器直接玩：[truth-detective-16544.app.workbuddy.host](https://truth-detective-16544.app.workbuddy.host/)**
 > 完整的 Case 001，不用装任何东西。Web 版不带 API key，分析员自动使用离线
 > 规则引擎——游戏本来就按"有没有 AI 都完整"设计。桌面版配上 DeepSeek key
 > 即可启用真模型。

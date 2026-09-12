@@ -4,7 +4,7 @@
 
 [中文 README →](README_中文.md)
 
-> **▶ Play in your browser: [truth-detective.app.workbuddy.host](https://truth-detective.app.workbuddy.host/)**
+> **▶ Play in your browser: [truth-detective-16544.app.workbuddy.host](https://truth-detective-16544.app.workbuddy.host/)**
 > The full Case 001, no install. The web build ships without an API key, so the
 > Analyst runs on its offline rules engine — the game is designed to be complete
 > either way. Desktop build + a DeepSeek key unlocks the live model.

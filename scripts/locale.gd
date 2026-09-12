@@ -36,8 +36,16 @@ func _register_cjk_fallback() -> void:
 		push_warning("CJK fallback font missing: " + CJK_PATH)
 		return
 	var cjk: Font = load(CJK_PATH)
-	if cjk != null:
-		ThemeDB.fallback_font = cjk
+	if cjk == null:
+		return
+	ThemeDB.fallback_font = cjk
+	## 注意：ThemeDB.fallback_font 在 Web 导出包里不会被当缺字形兜底用
+	## （实测所有取字路径都渲染成 codepoint 方框）。可靠的兜底是
+	## Font.fallbacks 数组——HUD 这类不指定字体的控件走默认主题字体，
+	## 把它也挂上。案件界面里显式指定字体的控件由 UIKit._cached 统一挂。
+	var dt := ThemeDB.get_default_theme()
+	if dt != null and dt.default_font != null and not dt.default_font.fallbacks.has(cjk):
+		dt.default_font.fallbacks.append(cjk)
 
 func set_lang(l: String) -> void:
 	if not DICT.has(l) or l == lang:
