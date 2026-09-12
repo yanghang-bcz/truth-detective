@@ -27,6 +27,10 @@ blender/renders/
 __pycache__/
 *.pyc
 
+# 本地 AI 配置：只放 API key，绝不进版本库。仓库里只有 config/local.env.example。
+config/local.env
+.env
+
 # 截图产物：由 tools/shot_*.gd 生成，不需要进版本库也不需要被 Godot 导入
 previews/*.png
 previews/*.png.import

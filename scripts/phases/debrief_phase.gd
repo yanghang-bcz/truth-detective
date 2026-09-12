@@ -40,6 +40,11 @@ func _build() -> void:
 	_c.add_child(_patterns())
 	_c.add_child(UIKit.gap(40))
 
+	_c.add_child(section(Locale.t("debrief.ai")))
+	_c.add_child(UIKit.gap(20))
+	_c.add_child(_ai_collaboration())
+	_c.add_child(UIKit.gap(40))
+
 	_c.add_child(_closing())
 	_c.add_child(UIKit.gap(34))
 	_c.add_child(_footer())
@@ -252,6 +257,71 @@ func _pattern_row(key: String, ok: bool, specs: Dictionary) -> Control:
 	box.add_child(UIKit.paragraph(str(spec.get("good" if ok else "weak", "")), 13,
 		Color(UIKit.FOG.r, UIKit.FOG.g, UIKit.FOG.b, 0.9)))
 	return box
+
+# ─────────────────────────────────────────────────────────────
+## AI Collaboration。这一节不问"你答对没有"，问"你是怎么用它的"。
+##
+## 判据是启发式的，不是评分：**先看证据再问、并且让分析员质疑自己**算好用法；
+## **一条证据都没开就先问、而且从没让它反驳自己**算把它当答题机。
+##
+## 故意不显示成分数。一旦有分数，玩家就会去优化分数，而不是优化思考 ——
+## 而这一整节想教的恰好是"AI 应该让你想得更多，不是更少"。
+func _ai_collaboration() -> Control:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 12)
+	var consults: int = CaseState.ai_history.size()
+	var used: int = CaseState.ANALYST_TOKENS_MAX - CaseState.analyst_tokens
+
+	if consults == 0:
+		box.add_child(UIKit.paragraph(Locale.t("debrief.ai_none"), 13, UIKit.FOG))
+		return box
+
+	var challenged := false
+	var asked_before_evidence := false
+	for entry in CaseState.ai_history:
+		if str(entry.get("action", "")) == "challenge":
+			challenged = true
+		if int(entry.get("opened", 0)) == 0:
+			asked_before_evidence = true
+
+	var tier := "balanced"
+	if challenged and not asked_before_evidence:
+		tier = "strong"
+	elif asked_before_evidence and not challenged:
+		tier = "weak"
+	var color := UIKit.J_INSUFFICIENT
+	if tier == "strong":
+		color = UIKit.J_SUPPORTED
+	elif tier == "weak":
+		color = UIKit.J_SUSPICIOUS
+
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 12)
+	var count := UIKit.meta(Locale.tf("debrief.ai_count", [used, CaseState.ANALYST_TOKENS_MAX]),
+		11, UIKit.SLATE, 2)
+	count.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(count)
+	head.add_child(UIKit.fill(UIKit.hgap(0)))
+	var status := UIKit.meta(Locale.t("debrief." + tier), 10, color, 2)
+	status.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(status)
+	box.add_child(head)
+
+	# 没配 key 时每一次咨询都来自离线引擎。这时候把这一节说成"AI 协作"是不诚实的，
+	# 而且"AI 咨询用掉 0 / 3"也需要一句解释，否则读起来像自相矛盾。
+	if CaseState.ai_uses().is_empty():
+		box.add_child(UIKit.paragraph(Locale.t("debrief.ai_offline_only"), 11, UIKit.MUTED))
+
+	var fill := 0.6
+	if tier == "strong":
+		fill = 1.0
+	elif tier == "weak":
+		fill = 0.24
+	box.add_child(meter(fill, color))
+	box.add_child(UIKit.paragraph(Locale.t("debrief.ai_" + tier), 13,
+		Color(UIKit.FOG.r, UIKit.FOG.g, UIKit.FOG.b, 0.9)))
+	return box
+
 
 # ─────────────────────────────────────────────────────────────
 func _closing() -> Control:

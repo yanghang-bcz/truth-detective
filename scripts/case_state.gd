@@ -11,8 +11,17 @@ extends Node
 signal points_changed(remaining: int)
 signal unlocked_changed(id: String)
 signal judgment_recorded(entry: Dictionary)
+signal analyst_tokens_changed(left: int)
+## 一个案件从头开始（含重开）。AiCoach 听它清缓存 ——
+## 用信号而不是让 CaseState 反向调用 AiCoach：autoload 互相调用容易
+## 撞上初始化顺序，而"谁清谁的缓存"和"案件什么时候开始"本来也是两件事。
+signal case_started
 
 const CASE_ID := "case_001"
+
+## AI 咨询的额度。跟调查点分开记：调查点是"调查资源"，
+## 它是"AI 协作资源"，两者混在一起就说不清玩家到底在省什么。
+const ANALYST_TOKENS_MAX := 3
 
 var data: Dictionary = {}
 
@@ -32,6 +41,15 @@ var initial_judgments: Dictionary = {}
 var final_judgments: Dictionary = {}
 
 var ai_calls: int = 0
+
+## 剩下的 AI 咨询次数 / 这次案件里问过分析员什么。
+## 每条：{action, claim, judgment, confidence, evidence, source, response, time}
+##   source: "ai"（模型） / "offline"（离线引擎兜底） / "cache"（同一问题重问）
+##   time:   案件开始的第几秒。Debrief 的 AI Collaboration 全靠它还原时间线。
+var analyst_tokens: int = ANALYST_TOKENS_MAX
+var ai_history: Array[Dictionary] = []
+
+var _started_msec: int = 0
 
 
 func _ready() -> void:
@@ -65,7 +83,48 @@ func start(payload: Dictionary = {}) -> void:
 	final_judgments.clear()
 	focused_evidence = ""
 	ai_calls = 0
+	analyst_tokens = ANALYST_TOKENS_MAX
+	ai_history.clear()
+	_started_msec = Time.get_ticks_msec()
 	points_changed.emit(remaining())
+	analyst_tokens_changed.emit(analyst_tokens)
+	case_started.emit()
+
+
+# ─────────────────────────────────────────────────────────────
+#  AI 咨询
+# ─────────────────────────────────────────────────────────────
+## 案件开始到现在过了多少秒。历史条目里存它，而不是存绝对时间戳 ——
+## 复盘要回答的是"他先看了证据还是先问了 AI"。
+func elapsed_seconds() -> float:
+	if _started_msec == 0:
+		return 0.0
+	return float(Time.get_ticks_msec() - _started_msec) / 1000.0
+
+
+func consume_analyst_token() -> bool:
+	if analyst_tokens <= 0:
+		return false
+	analyst_tokens -= 1
+	analyst_tokens_changed.emit(analyst_tokens)
+	return true
+
+
+func note_consult() -> void:
+	ai_calls += 1
+
+
+func record_ai(entry: Dictionary) -> void:
+	ai_history.append(entry)
+
+
+## 用了模型的那几次（不含离线兜底）。Debrief 判断"AI 用得好不好"时看的是这个。
+func ai_uses() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for entry in ai_history:
+		if str(entry.get("source", "")) == "ai":
+			out.append(entry)
+	return out
 
 
 # ─────────────────────────────────────────────────────────────

@@ -19,6 +19,7 @@ config/features=PackedStringArray("4.5", "Forward Plus")
 
 CaseState="*res://scripts/case_state.gd"
 Locale="*res://scripts/locale.gd"
+AiCoach="*res://scripts/ai/ai_coach.gd"
 
 [display]
 

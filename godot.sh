@@ -8,7 +8,7 @@
 #   ./godot.sh                     打开 Godot 编辑器（-= 编辑器模式；这是日常开发入口）
 #   ./godot.sh --run               直接运行游戏，等于编辑器里的 F5
 #   ./godot.sh --rebuild           重建场景（build_scene → build_playable，顺序不能反）
-#   ./godot.sh --test              跑玩法回归测试 + 场景校验
+#   ./godot.sh --test              跑玩法回归 + 场景校验 + 触发冒烟 + AI 层回归
 #   ./godot.sh --bench             跑性能基准（真实帧耗时，不受垂直同步影响）
 #   ./godot.sh --headless --script res://tools/xxx.gd    其余参数原样透传给 Godot
 #
@@ -76,6 +76,9 @@ case "${1:-}" in
     # 这一条必须用场景方式跑：--script 模式不注册 autoload，引用 CaseState 会编译失败。
     "$GODOT" --path "$PROJECT_DIR" res://tools/test_case_trigger.tscn \
       | grep -E "^(PASS|FAIL|NOTE|CASE_TRIGGER)" || true
+    echo "== AI 层回归（Safe Context / Validator / 优雅降级 / 额度与缓存）=="
+    "$GODOT" --path "$PROJECT_DIR" --headless res://tools/test_ai.tscn \
+      | grep -E "^(PASS|FAIL|NOTE|AI_TESTS)" || true
     ;;
   --bench)
     "$GODOT" --path "$PROJECT_DIR" --resolution 1280x800 --script res://tools/bench.gd | grep -E "^BENCH" || true
