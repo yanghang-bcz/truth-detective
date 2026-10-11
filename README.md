@@ -5,9 +5,11 @@
 [中文 README →](README_中文.md)
 
 > **▶ Play in your browser: [truth-detective-16544.app.workbuddy.host](https://truth-detective-16544.app.workbuddy.host/)**
-> The full Case 001, no install. The web build ships without an API key, so the
-> Analyst runs on its offline rules engine — the game is designed to be complete
-> either way. Desktop build + a DeepSeek key unlocks the live model.
+> The full Case 001, no install. **The API key is not in this front end** — the
+> web build routes Analyst requests through a same-origin backend proxy (see
+> [Web export & deployment](#web-export--deployment)), so the key only ever lives
+> server-side. With no key configured there, the Analyst falls back to its
+> offline rules engine and the game still plays start to finish.
 
 You are a detective in a small 3D neighborhood. A viral clip shows a young woman
 apparently lashing out at an elderly man on a subway platform. Your job is not to
@@ -150,19 +152,55 @@ git clone https://github.com/yanghang-bcz/truth-detective.git
 Controls: WASD / arrows to walk, Shift to run, `E` at the subway entrance to
 open the case. Language toggle (EN / 中文) is in the case screen's top bar.
 
-### Web export
+### Web export & deployment
 
-`export_presets.cfg` ships with the repo. The Web preset deliberately disables
-thread support so the build runs on any plain static host (no COOP/COEP headers
-needed), and its exclude filter keeps `config/local.env` — i.e. **your API key
-can never end up inside the published `.pck`**. Rebuild with:
+A web build is not "export a static bundle and ship it" — **the DeepSeek key must
+never reach the browser.** So the web version is two pieces: the Godot static
+build plus a same-origin Node backend.
+
+```
+browser  ──POST /api/analyst──▶  server.js  ──Bearer key──▶  DeepSeek
+   ▲                                │
+   └──── index.html/pck/wasm ───────┘   (static hosting, no key anywhere)
+```
+
+One command does the export, the assembly and the server-side key:
 
 ```bash
-./godot.sh --headless --export-release "Web" build/web/index.html
+./web_build.sh          # output lands in build/web
+./web_build.sh --serve  # also serves it locally on 127.0.0.1:8080
+```
+
+`server/server.js` has zero dependencies (node built-ins only) and does three
+jobs:
+
+1. **Static hosting** for the Godot build, while denying `server.js` /
+   `deepseek.key` / `case/` and any path traversal — the key file sits in the
+   same directory but is **not reachable over HTTP**.
+2. **Proxying** `/api/analyst`. The key is read only from `DEEPSEEK_API_KEY` or a
+   sibling `deepseek.key` file; it is never returned to the front end and never
+   logged.
+3. **Pinning its purpose.** The request body must carry the family's own system
+   prompt marker, otherwise it's a 400. That stops anyone from using this proxy
+   as a free general-purpose LLM.
+
+Plus limits: 16 KB body, 4000-char system, 8000-char user, 12 requests per IP per
+300 s, 400/day globally, 8.5 s upstream timeout. Before returning, the server
+re-runs the same "locked evidence ID / direct answer" checks the client validator
+uses.
+
+On web the front end switches to proxy mode automatically and says so:
+
+```
+[AiCoach] AI_PROVIDER=proxy endpoint=https://…/api/analyst (same-origin proxy, the front end holds no key)
 ```
 
 Known web-build difference: the neighborhood's fog shader is Forward+-only, so
-fog simply doesn't render under WebGL2. Everything else is identical.
+fog simply doesn't render under WebGL2. Everything else is identical. The Web
+preset deliberately disables thread support so the build runs on any plain static
+host (no COOP/COEP headers needed), and its exclude filter keeps
+`config/local.env` — i.e. **your API key can never end up inside the published
+`.pck`**.
 
 ### Enabling the AI Analyst
 
@@ -180,28 +218,66 @@ DEEPSEEK_API_KEY=sk-...
 ```
 
 The key is read from those two places only, in that order. It is never written
-into the repository. The console states which engine is active at startup:
+into the repository. The desktop build talks to DeepSeek directly when it has its
+own key; you can also force the desktop build through the proxy to exercise the
+backend:
+
+```bash
+TD_AI_PROXY=1 ./godot.sh --run
+```
+
+The console states which engine is active at startup:
 
 ```
 [AiCoach] AI_PROVIDER=deepseek model=deepseek-chat
+[AiCoach] AI_PROVIDER=proxy endpoint=…
 [AiCoach] AI_PROVIDER=fallback reason=no_key
 ```
 
 ## Verification
 
-Three automated suites guard the things that break silently:
+Four automated suites guard the things that break silently:
 
 ```bash
 ./godot.sh --test                              # all of the below
-# ├─ tools/test_player.gd          12 physics/gameplay checks
-# ├─ tools/validate_scene.gd       scene integrity (merge batch counts, owners)
-# ├─ tools/test_case_trigger.tscn  25-assertion smoke test:
-# │                                street → [E] → case → close → back to street
-# └─ tools/test_ai.tscn            47 checks: locked-evidence never appears in
-#                                  prompts, validator blocks leaks/hallucinated
-#                                  IDs/direct answers, no-key degradation,
-#                                  timeout/4xx/5xx don't crash and don't
-#                                  consume tokens, cache & token exhaustion
+# ├─ tools/test_player.gd             12 physics/gameplay checks
+# ├─ tools/test_input_map.gd          11 real-input-path checks:
+# │                                    key event → InputMap → Input.get_vector → movement
+# ├─ tools/test_metro_reachability.gd  can the player actually *walk* from spawn into the trigger?
+# ├─ tools/validate_scene.gd          scene integrity (merge batch counts, owners)
+# ├─ tools/test_case_trigger.tscn     25-assertion smoke test:
+# │                                    street → [E] → case → close → back to street
+# └─ tools/test_ai.tscn               47 checks: locked-evidence never appears in
+#                                      prompts, validator blocks leaks/hallucinated
+#                                      IDs/direct answers, no-key degradation,
+#                                      timeout/4xx/5xx don't crash and don't
+#                                      consume tokens, cache & token exhaustion
+```
+
+The last two cover two "all-green but the game is dead" blind spots:
+
+- `test_player` drives the player through the `automated + test_input` back door,
+  so it cannot prove that *a real keypress moves the character*. If action
+  registration, physical-key mapping or the Input singleton breaks, every
+  existing test still passes while the player just stands there — which is
+  exactly where the web build fails first.
+- `test_case_trigger` **teleports** the player into the trigger
+  (`player.global_position = center`), so "can the player walk to the subway
+  entrance?" was never verified. Change the spawn point, a collider or the street
+  layout and the whole game can be unplayable while every other test stays green.
+
+The backend has its own security suite. The client's three layers only constrain
+requests the game itself makes — they do nothing about someone curling the
+endpoint directly, which is what this file tests:
+
+```bash
+./web_build.sh --serve &          # one terminal
+node server/test_proxy.mjs        # another
+# covers: key unreachable over HTTP, server.js/package.json not downloadable,
+#         path traversal, index.wasm MIME, a general-purpose prompt disguised
+#         as an Analyst request → 400, oversized body → 413, a real DeepSeek
+#         round trip, optional rate-limit and quota checks
+# env: LIVE=0 skips the live model call; RATELIMIT=1 adds the rate-limit test
 ```
 
 Performance is benchmarked, not eyeballed (on a fanless 8 GB MacBook Air M3):
@@ -224,8 +300,11 @@ data/             case content, one JSON per language — all writing lives here
 scripts/ai/       client · safe context · prompt builder · validator · coach
 scripts/phases/   intro → board → final → debrief (UI is 100% script-built)
 scripts/ui/       design system, analyst panel, video still, judgment rows
+server/           web backend: static hosting + /api/analyst proxy + security suite
 tools/            scene builders, test suites, benchmarks, screenshot rigs
 blender/          the detective is generated by build_detective.py, not hand-made
+godot.sh          desktop entry: run / rebuild / tests / bench
+web_build.sh      web entry: export + assemble backend + write server-side key
 ```
 
 Two conventions worth knowing before editing: scenes are **generated by scripts**

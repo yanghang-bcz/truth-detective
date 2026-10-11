@@ -5,9 +5,9 @@
 [English README →](README.md)
 
 > **▶ 浏览器直接玩：[truth-detective-16544.app.workbuddy.host](https://truth-detective-16544.app.workbuddy.host/)**
-> 完整的 Case 001，不用装任何东西。Web 版不带 API key，分析员自动使用离线
-> 规则引擎——游戏本来就按"有没有 AI 都完整"设计。桌面版配上 DeepSeek key
-> 即可启用真模型。
+> 完整的 Case 001，不用装任何东西。**密钥不在这份前端里**——网页版把分析员请求
+> 交给同域后端代理（见 [Web 版导出与部署](#web-版导出与部署)），密钥只存在于服务端。
+> 后端没配密钥时，分析员自动退回离线规则引擎，游戏照样能从头玩到尾。
 
 你是街区里的一名侦探。一段疯传的偷拍视频里，一个年轻女子似乎在地铁站台上
 对一位老人大发雷霆。你的任务不是判断视频"是不是真的"——它是真的。你的任务
@@ -140,19 +140,47 @@ git clone https://github.com/yanghang-bcz/truth-detective.git
 操作：WASD / 方向键行走，Shift 奔跑，走到地铁口按 `E` 进入案件。
 案件界面右上角切换语言（EN / 中文）。
 
-### Web 版导出
+### Web 版导出与部署
 
-仓库自带 `export_presets.cfg`。Web 预设刻意**关闭线程支持**，这样构建产物
-在任意静态托管上都能跑（不需要 COOP/COEP 响应头）；排除过滤器把
-`config/local.env` 挡在包外——**你的 API key 不可能被打进发布的 `.pck`**。
-重新构建：
+网页版不是"导出一个静态包"就完事——**DeepSeek 的 key 绝不能进浏览器**。
+所以网页版是「Godot 静态产物 + 一个同域 Node 后端」两部分：
+
+```
+浏览器  ──POST /api/analyst──▶  server.js  ──Bearer key──▶  DeepSeek
+   ▲                                │
+   └──── index.html/pck/wasm ───────┘（静态托管，不含任何密钥）
+```
+
+一条命令完成导出 + 组装 + 配置密钥：
 
 ```bash
-./godot.sh --headless --export-release "Web" build/web/index.html
+./web_build.sh          # 产物在 build/web
+./web_build.sh --serve  # 顺带在本机起服务，浏览器打开 127.0.0.1:8080 实测
+```
+
+`server/server.js` 是零依赖的（只用 node 内置模块），职责有三：
+
+1. **静态托管** Godot 产物，并拦住 `server.js` / `deepseek.key` / `case/`
+   与目录穿越——密钥文件在同目录但**不可经 HTTP 取到**。
+2. **代理** `/api/analyst`。密钥只从 `DEEPSEEK_API_KEY` 环境变量或同目录
+   `deepseek.key` 文件读，全程不回传前端、不进日志。
+3. **钉死用途**：请求体必须带家族专属的系统提示词标记，否则一律 400。
+   防止有人拿这个代理当免费通用 LLM 刷。
+
+配套限制：请求体 16 KB、system 4000 字符、user 8000 字符、单 IP 300 秒 12 次、
+全局每天 400 次、上游 8.5 秒超时；服务端还会在返回前再做一次
+「未解锁证据编号 / 直接给答案」校验，与端上校验器同一份规则。
+
+前端在 Web 平台自动切到代理模式，日志会说明：
+
+```
+[AiCoach] AI_PROVIDER=proxy endpoint=https://…/api/analyst（同域代理，前端不持有密钥）
 ```
 
 已知的 Web 版差异：街区雾效 shader 只有 Forward+ 支持，WebGL2 下雾不渲染，
-其余完全一致。
+其余完全一致。Web 预设刻意**关闭线程支持**，这样产物在任意静态托管上都能跑
+（不需要 COOP/COEP 响应头）；排除过滤器把 `config/local.env` 挡在包外——
+**你的 API key 不可能被打进发布的 `.pck`**。
 
 ### 启用 AI 分析员
 
@@ -170,28 +198,59 @@ export DEEPSEEK_API_KEY=sk-...
 DEEPSEEK_API_KEY=sk-...
 ```
 
-key 只从这两个位置按此顺序读取，永远不会被写进仓库。启动时控制台会说明
-当前用的是哪套引擎：
+key 只从这两个位置按此顺序读取，永远不会被写进仓库。桌面版有自己的 key 时
+直连 DeepSeek；也可以在桌面版上强制走代理来验证后端：
+
+```bash
+TD_AI_PROXY=1 ./godot.sh --run
+```
+
+启动时控制台会说明当前用的是哪套引擎：
 
 ```
 [AiCoach] AI_PROVIDER=deepseek model=deepseek-chat
+[AiCoach] AI_PROVIDER=proxy endpoint=…
 [AiCoach] AI_PROVIDER=fallback reason=no_key
 ```
 
 ## 验证
 
-三套自动化测试守着那些"坏起来不出声"的地方：
+四套自动化测试守着那些"坏起来不出声"的地方：
 
 ```bash
 ./godot.sh --test                              # 以下全部
-# ├─ tools/test_player.gd          12 项物理/玩法检查
-# ├─ tools/validate_scene.gd       场景完整性（合并批次数、owner）
-# ├─ tools/test_case_trigger.tscn  25 项冒烟断言：
-# │                                街上 → [E] → 案件 → 关闭 → 回到街上
-# └─ tools/test_ai.tscn            47 项：未解锁证据绝不出现在 prompt、
-#                                  校验器拦截泄题/编造编号/直接给答案、
-#                                  无 key 降级、超时/4xx/5xx 不崩不扣额度、
-#                                  缓存与额度耗尽路径
+# ├─ tools/test_player.gd             12 项物理/玩法检查
+# ├─ tools/test_input_map.gd          11 项真实输入链路：
+# │                                   键盘事件 → InputMap → Input.get_vector → 角色位移
+# ├─ tools/test_metro_reachability.gd  从出生点**真的走过去**能否进入触发区
+# ├─ tools/validate_scene.gd          场景完整性（合并批次数、owner）
+# ├─ tools/test_case_trigger.tscn     25 项冒烟断言：
+# │                                   街上 → [E] → 案件 → 关闭 → 回到街上
+# └─ tools/test_ai.tscn               47 项：未解锁证据绝不出现在 prompt、
+#                                     校验器拦截泄题/编造编号/直接给答案、
+#                                     无 key 降级、超时/4xx/5xx 不崩不扣额度、
+#                                     缓存与额度耗尽路径
+```
+
+后两套是针对两类**"全绿但游戏是死的"**盲区补的：
+
+- `test_player` 走的是 `automated + test_input` 旁路，证明不了"玩家真按键时
+  角色会动"。动作注册、物理键位映射、Input 单例这条链路一旦断掉，所有既有
+  测试依然全绿，而玩家进游戏后只能干站着——网页版最容易死在这里。
+- `test_case_trigger` 是**把玩家瞬移进触发区**的（`player.global_position = center`），
+  所以"玩家能不能从出生点走到地铁口"从来没被验证过。出生点、碰撞体或街道
+  布局一改就可能把整局游戏走死，而其它测试依然全绿。
+
+后端还有一套独立的安全自测。端上的三层防护只能管住游戏自己发出去的请求，
+管不住别人直接 curl —— 这个文件测的就是"别人直接 curl"时会发生什么：
+
+```bash
+./web_build.sh --serve &          # 一个终端起服务
+node server/test_proxy.mjs        # 另一个终端跑自测
+# 覆盖：密钥不可经 HTTP 读取、server.js/package.json 不可下载、目录穿越、
+#      index.wasm 的 MIME、伪装成分析员的通用提问被 400、
+#      超大请求体 413、真实 DeepSeek 往返、可选限流与配额
+# 环境变量：LIVE=0 跳过真实模型调用；RATELIMIT=1 追加限流测试
 ```
 
 性能靠基准说话，不靠感觉（无风扇 8GB MacBook Air M3 实测）：
@@ -213,8 +272,11 @@ data/             案件内容，每种语言一个 JSON —— 所有文案都�
 scripts/ai/       client · 安全上下文 · 提示词 · 校验器 · 教练编排
 scripts/phases/   开场 → 棋盘 → 终判 → 复盘（界面 100% 由脚本构建）
 scripts/ui/       设计系统、分析员面板、偷拍视频帧、判定行
+server/           网页版同域后端：静态托管 + /api/analyst 代理 + 安全自测
 tools/            场景生成、测试套件、性能基准、截图工具
 blender/          侦探角色由 build_detective.py 生成，不是手做的
+godot.sh          桌面版入口：运行 / 重建 / 回归测试 / 基准
+web_build.sh      网页版入口：导出 + 组装后端 + 写入服务端密钥
 ```
 
 改之前值得知道的两条约定：场景是**脚本生成的**（`tools/build_*.gd`，

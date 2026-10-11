@@ -70,6 +70,14 @@ case "${1:-}" in
   --test)
     echo "== 玩法回归测试 =="
     run_script test_player.gd | grep -E "^(PASS|FAIL)" || true
+    echo "== 真实输入链路（键盘事件 → InputMap → 角色位移）=="
+    # test_player 走的是 automated + test_input 旁路，证明不了"玩家真按键会动"。
+    # 网页版最容易死在这一段：物理全绿、角色却站着不动。
+    run_script test_input_map.gd | grep -E "^(PASS|FAIL)" || true
+    echo "== 地铁口可达性（从出生点真的走过去）=="
+    # test_case_trigger 是把玩家瞬移进触发区的，证明不了"出生点能走到地铁口"。
+    # 出生点/碰撞体一改就可能把整局游戏走死，而其它测试全绿。
+    run_script test_metro_reachability.gd | grep -E "^(PASS|FAIL|NOTE)" || true
     echo "== 场景校验 =="
     run_script validate_scene.gd | grep -E "^(PASS|ERROR)" || true
     echo "== 地铁口触发冒烟测试（地铁口 → [E] → 案件 → 关闭 → 回到街上）=="

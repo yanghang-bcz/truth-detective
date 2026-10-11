@@ -40,6 +40,9 @@ func _ready() -> void:
 	# 而离线引擎的回答又刻意写得像分析员 —— 不靠日志区分，就是在猜。
 	if transport.is_valid():
 		print("[AiCoach] AI_PROVIDER=test-double")
+	elif AiConfig.use_proxy():
+		# 网页版走这里：前端没有密钥，请求交给同域后端代理转发。
+		print("[AiCoach] AI_PROVIDER=proxy endpoint=%s （同域代理，前端不持有密钥）" % AiConfig.endpoint())
 	elif AiConfig.has_key():
 		print("[AiCoach] AI_PROVIDER=deepseek model=%s" % AiConfig.MODEL)
 	else:
@@ -50,7 +53,10 @@ func _ready() -> void:
 #  对外状态
 # ─────────────────────────────────────────────────────────────
 func available() -> bool:
-	return AiConfig.has_key()
+	# 注意：这里问的不是"前端有没有密钥"，而是"这条路能不能调到模型"。
+	# 网页版的前端永远没有密钥，但它有代理 —— 用 has_key() 判断会让
+	# 网页版直接跳过代理、一路掉到离线兜底。
+	return AiConfig.can_call_model()
 
 
 func tokens() -> int:

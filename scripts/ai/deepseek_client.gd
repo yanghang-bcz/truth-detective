@@ -33,15 +33,16 @@ func ask(system: String, user: String, sink: Callable) -> void:
 	if _busy:
 		sink.call(_result(false, "", ERR_BUSY))
 		return
-	if not AiConfig.has_key():
+	if not AiConfig.can_call_model():
 		sink.call(_result(false, "", ERR_NO_KEY))
 		return
 
 	_busy = true
-	var headers := PackedStringArray([
-		"Content-Type: application/json",
-		"Authorization: Bearer " + AiConfig.api_key(),
-	])
+	var headers := PackedStringArray(["Content-Type: application/json"])
+	# 代理模式下**不发** Authorization —— 密钥在后端。
+	# 这里少写一行的代价，就是密钥出现在浏览器的请求头里。
+	if not AiConfig.use_proxy():
+		headers.append("Authorization: Bearer " + AiConfig.api_key())
 	var payload := {
 		"model": AiConfig.MODEL,
 		"messages": [
@@ -53,10 +54,13 @@ func ask(system: String, user: String, sink: Callable) -> void:
 		"max_tokens": AiConfig.MAX_TOKENS,
 		"stream": false,
 	}
-	var err := _http.request(AiConfig.ENDPOINT, headers, HTTPClient.METHOD_POST,
+	var err := _http.request(AiConfig.endpoint(), headers, HTTPClient.METHOD_POST,
 		JSON.stringify(payload))
 	if err != OK:
 		_busy = false
+		# 开发期必须能一眼看出"请求压根没发出去"和"发出去了但失败"的区别 ——
+		# 前者服务端日志里什么都没有，很容易被误判成后端挂了。
+		printerr("[DeepSeekClient] request() 未发出 err=%d url=%s" % [err, AiConfig.endpoint()])
 		sink.call(_result(false, "", ERR_NETWORK))
 		return
 

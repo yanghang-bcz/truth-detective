@@ -194,8 +194,8 @@ func test_validator() -> void:
 #  Test C：没有 key 也要能玩
 # ─────────────────────────────────────────────────────────────
 func test_no_key_degrades() -> void:
-	if AiConfig.has_key():
-		_note("本机配了 DEEPSEEK_API_KEY，「无 key」用例跳过；其行为由 Test D 用假 client 覆盖")
+	if AiConfig.can_call_model():
+		_note("本机配了 DEEPSEEK_API_KEY（或启用了代理），「无 key」用例跳过；其行为由 Test D 用假 client 覆盖")
 		return
 	_check(not AiCoach.available(), "无 key 时 AiCoach 报告不可用")
 	var before := CaseState.analyst_tokens
