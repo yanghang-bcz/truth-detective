@@ -4,7 +4,7 @@
 
 [中文 README →](README_中文.md)
 
-> **▶ Play in your browser: [truth-detective-16544.app.workbuddy.host](https://truth-detective-16544.app.workbuddy.host/)**
+> **▶ Play in your browser: [truth-detective-07655.app.workbuddy.host](https://truth-detective-07655.app.workbuddy.host/)**
 > The full Case 001, no install. **The API key is not in this front end** — the
 > web build routes Analyst requests through a same-origin backend proxy (see
 > [Web export & deployment](#web-export--deployment)), so the key only ever lives
@@ -202,6 +202,40 @@ host (no COOP/COEP headers needed), and its exclude filter keeps
 `config/local.env` — i.e. **your API key can never end up inside the published
 `.pck`**.
 
+### Live deployment
+
+The public playable instance:
+
+| | |
+|---|---|
+| URL | https://truth-detective-07655.app.workbuddy.host/ |
+| Shape | one Node port — Godot static output + same-origin `/api/analyst` proxy |
+| Key lives | server-side env var / `deepseek.key` only; never in the page or `.pck` |
+
+The server has no third-party dependencies (`node:http`, `node:https`,
+`node:fs`, `node:path`, `node:crypto` only) — the repo has no `node_modules`.
+
+**Cost.** A full Case 001 normally costs 1–3 model calls (3 Analyst consults
+per case). Two extra gates sit server-side: 12 requests per IP per 300 s, and a
+global 400/day cap. **Hitting either gate degrades the Analyst to the offline
+rules engine instead of erroring** — players never see a broken screen, and the
+bill can't run away.
+
+**Ops.**
+
+| To change | Do this |
+|---|---|
+| API key | set `DEEPSEEK_API_KEY` on the server (or `deepseek.key` beside it), restart |
+| Game content | `./web_build.sh`, then redeploy |
+| Backend status | `GET /api/health` → `{ok, key_configured, evidence_ids, daily_limit, day_count}` (never echoes the key) |
+| Turn AI off entirely | just don't set a key — the Analyst falls back to the offline engine, gameplay and the final verdict are unaffected |
+| Probe a deployed backend | `BASE=https://… node server/test_proxy.mjs` |
+
+All quota and rate-limit knobs live in the constants block at the top of
+`server/server.js` (`BODY_LIMIT_BYTES`, `SYSTEM_MAX`, `USER_MAX`, `IP_WINDOW_MS`,
+`IP_MAX`, `DAILY_LIMIT`, `UPSTREAM_TIMEOUT_MS`) and take effect server-side
+without any front-end change.
+
 ### Enabling the AI Analyst
 
 The game works end-to-end without a key. To switch the Analyst from the offline
@@ -292,6 +326,42 @@ The case screen is a full-screen opaque layer, but Godot keeps rendering the 3D
 street beneath it — the game now suspends world rendering while a case is open.
 `tools/bench_case.tscn` keeps a live A/B comparison so deleting that optimization
 fails loudly.
+
+### Public end-to-end acceptance
+
+"Exported successfully" is not "playable". Before going public we walked the
+whole of Case 001 in a real browser against the **public URL**, keeping console
+and screen evidence at every step:
+
+| Check | Result |
+|---|---|
+| Open the link, land in the game | ✅ no Godot install, no API key |
+| Walk to the metro entrance, press `[E]` | ✅ |
+| File E01 / E04 / E08 on the evidence board | ✅ 3 / 8 opened, 6 / 10 points spent |
+| Analyst answers | ✅ `source=ai ok=true`, content strictly tied to unlocked evidence |
+| All four claims judged and submitted | ✅ A supported / B unsupported / C not enough evidence / D unsupported |
+| Debrief rendered | ✅ three reasoning patterns STRONG |
+| Key unreachable over HTTP | ✅ `/deepseek.key`, `/server.js` both 404 |
+| Backend safety suite against production | ✅ 17 / 17, including one live DeepSeek round trip |
+
+> Six screenshots live in [`docs/release/`](docs/release/): public case opened →
+> evidence board → live Analyst answer → final judgment → debrief.
+
+```
+[AiCoach] AI_PROVIDER=proxy endpoint=https://…/api/analyst（同域代理，前端不持有密钥）
+[AiCoach] -> deepseek action=explain claim=B target=E08 unlocked=3
+[AiCoach] <- source=ai action=explain ok=true tokens_left=2 failure= blocked=
+```
+
+That `source=ai` is the whole point: it takes a different code path from
+`fallback`. Model-generated prose actually showing up on the page means the
+**server-side key, the same-origin proxy, the timeout and the output validator —
+the entire chain — work on the public internet.**
+
+The `test_case_trigger` blind spot is covered too: `tools/test_metro_reachability.gd`
+now *greedily walks* from the real spawn point into the trigger zone, so moving
+the spawn point or reworking the street layout fails immediately instead of
+silently shipping a game nobody can start.
 
 ## Repository layout
 

@@ -4,7 +4,7 @@
 
 [English README →](README.md)
 
-> **▶ 浏览器直接玩：[truth-detective-16544.app.workbuddy.host](https://truth-detective-16544.app.workbuddy.host/)**
+> **▶ 浏览器直接玩：[truth-detective-07655.app.workbuddy.host](https://truth-detective-07655.app.workbuddy.host/)**
 > 完整的 Case 001，不用装任何东西。**密钥不在这份前端里**——网页版把分析员请求
 > 交给同域后端代理（见 [Web 版导出与部署](#web-版导出与部署)），密钥只存在于服务端。
 > 后端没配密钥时，分析员自动退回离线规则引擎，游戏照样能从头玩到尾。
@@ -182,6 +182,37 @@ git clone https://github.com/yanghang-bcz/truth-detective.git
 （不需要 COOP/COEP 响应头）；排除过滤器把 `config/local.env` 挡在包外——
 **你的 API key 不可能被打进发布的 `.pck`**。
 
+### 线上部署现状
+
+当前公开试玩实例：
+
+| 项目 | 值 |
+|---|---|
+| 地址 | https://truth-detective-07655.app.workbuddy.host/ |
+| 形态 | 单端口 Node 服务（Godot 静态产物 + `/api/analyst` 同域代理） |
+| 密钥位置 | 仅在服务端环境变量 / `deepseek.key`，页面与 `.pck` 里都没有 |
+
+服务端不依赖任何第三方包（只用 `node:http` / `node:https` / `node:fs` /
+`node:path` / `node:crypto`），仓库里没有 `node_modules`。
+
+**成本。** 一局 Case 001 正常只花 1–3 次模型调用（每局上限 3 次 AI 咨询）。
+服务端另设两道闸——单 IP 300 秒 12 次、全局每天 400 次；**命中任一道都会让
+分析员退回离线规则引擎，而不是报错**，所以被刷时玩家这边不崩、账单也不会失控。
+
+**运维。**
+
+| 要改什么 | 怎么做 |
+|---|---|
+| 换 API key | 改服务端 `DEEPSEEK_API_KEY`（或同目录 `deepseek.key`），重启服务 |
+| 改游戏内容 | `./web_build.sh` 重新导出后重新发布 |
+| 看后端状态 | `GET /api/health` → `{ok, key_configured, evidence_ids, daily_limit, day_count}`（不回显密钥） |
+| 想彻底关掉 AI | 不配 key 即可——分析员自动走离线规则引擎，玩法与终判完全不受影响 |
+| 验证线上后端 | `BASE=https://… node server/test_proxy.mjs` |
+
+配额与限流参数都在 `server/server.js` 顶部常量区（`BODY_LIMIT_BYTES`、
+`SYSTEM_MAX`、`USER_MAX`、`IP_WINDOW_MS`、`IP_MAX`、`DAILY_LIMIT`、
+`UPSTREAM_TIMEOUT_MS`），改完即生效，前端无需配合改动。
+
 ### 启用 AI 分析员
 
 不配 key 也能完整游玩（自动使用离线规则引擎）。要让分析员走 DeepSeek，
@@ -264,6 +295,39 @@ node server/test_proxy.mjs        # 另一个终端跑自测
 案件界面是一层全屏不透明叠层，但 Godot 不会因此跳过底下的 3D 街区——
 现在案件打开期间会暂停街区渲染。`tools/bench_case.tscn` 里留着一组活体
 A/B 对照，谁把这项优化删了会立刻喊出来。
+
+### 公网端到端验收
+
+"导出成功"不等于"能玩"。正式对外之前，用真实浏览器在**公开地址**上完整走了一遍
+Case 001，每步都留了控制台与页面证据：
+
+| 验收点 | 结果 |
+|---|---|
+| 打开链接直接进游戏 | ✅ 不装 Godot、不配 API Key |
+| 走到地铁口按 `[E]` 触发案件 | ✅ |
+| 证据板归档 E01 / E04 / E08 | ✅ 3 / 8 opened，消耗 6 / 10 点 |
+| AI 分析员应答 | ✅ `source=ai ok=true`，内容严格对应已解锁的证据 |
+| 四条主张终判并提交 | ✅ A 支持 / B 不支持 / C 证据不足 / D 不支持 |
+| 复盘页生成 | ✅ 三项推理模式 STRONG |
+| 密钥不可经 HTTP 读取 | ✅ `/deepseek.key`、`/server.js` 均 404 |
+| 后端安全自测（打线上） | ✅ 17 / 17 通过（含一次真实 DeepSeek 往返） |
+
+> 六张现场截图存在 [`docs/release/`](docs/release/)：公网打开案件 → 证据板 →
+> 分析员真实应答 → 终判 → 复盘。
+
+```
+[AiCoach] AI_PROVIDER=proxy endpoint=https://…/api/analyst（同域代理，前端不持有密钥）
+[AiCoach] -> deepseek action=explain claim=B target=E08 unlocked=3
+[AiCoach] <- source=ai action=explain ok=true tokens_left=2 failure= blocked=
+```
+
+最后一行里的 `source=ai` 是关键：它和 `fallback` 走两条完全不同的代码路径。
+页面上真的出现了模型生成的句子，就说明**服务端密钥、同域代理、超时与输出校验器
+这一整条链路都在公网上跑通了**。
+
+`test_case_trigger` 那条盲区也补上了：新增 `tools/test_metro_reachability.gd`
+从真实出生点**贪心走到地铁口触发区**，出生点或街道布局一旦改动导致走不过去，
+它会立刻失败。
 
 ## 仓库结构
 

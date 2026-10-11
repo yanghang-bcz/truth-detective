@@ -40,3 +40,10 @@ previews/*.png.import
 previews/case/
 previews/case_zh/
 previews/video/
+
+# 网页版发布目录（由 build/web 复制而来，不进版本库）
+web-release/
+
+# WorkBuddy 本地工作数据（记忆/日志）与发布标识，不进版本库
+.workbuddy/
+.wbapp_*.genie
