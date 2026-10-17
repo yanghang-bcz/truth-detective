@@ -15,9 +15,11 @@ var focused_claim := "B"
 
 var _rows := {}                  ## evidence id -> 左栏那一行
 var _cards := {}                 ## evidence id -> 证据卡
-var _confidence_by_claim := {}
-var _pending_trigger := "revised"
 var _detail: EvidenceDetail
+
+## 下一次判定变更的成因。写进事件历史，Debrief 的时间轴读它。
+## 看完某张证据之后改的判 → "evidence:E04"；问完分析员之后改的 → "analyst"。
+var _cause := "revised"
 
 var _judge_scroll: ScrollContainer
 var _source_box: VBoxContainer
@@ -28,6 +30,7 @@ var _claim_text: Label
 var _claim_short: Label
 var _judgment: JudgmentRow
 var _confidence_box: VBoxContainer
+var _confidence_slider: ConfidenceSlider
 var _claim_tabs := {}
 var _hint: Label
 var _analyst: AnalystPanel
@@ -60,8 +63,9 @@ func _build() -> void:
 	_refresh_board()
 	_sync_judgment_panel()
 
-	for claim in CaseData.claims(case):
-		_confidence_by_claim[str(claim.get("id", ""))] = 50
+func _exit_tree() -> void:
+	# 离开调查页时把进行中的一次拖动结算掉，别让它少记一条事件。
+	_flush_confidence()
 
 # ─────────────────────────────────────────────────────────────
 #  左栏：调查方向
@@ -200,7 +204,7 @@ func _on_source_pressed(evidence_id: String) -> void:
 		return
 	_refresh_sources()
 	_refresh_board(true, evidence_id)
-	_pending_trigger = "evidence:" + evidence_id
+	_cause = "evidence:" + evidence_id
 	_open_detail(evidence_id)
 
 # ─────────────────────────────────────────────────────────────
@@ -368,7 +372,7 @@ func _build_judgment() -> Control:
 
 	# ── 分析员 ────────────────────────────────────────────
 	_analyst = AnalystPanel.make(focused_claim)
-	_analyst.spent.connect(func(_c: int) -> void: _pending_trigger = "analyst")
+	_analyst.spent.connect(func(_c: int) -> void: _cause = "analyst")
 	# 回答出现在面板下方，可能落在视野之外 —— 主动把它滚进来，
 	# 否则玩家点了按钮却看不到任何反应，会以为坏了。
 	_analyst.answered.connect(_on_analyst_answered)
@@ -440,10 +444,15 @@ func _tab_box(bg: Color, border: Color) -> StyleBoxFlat:
 	return sb
 
 func _select_claim(id: String) -> void:
+	# 切 Claim 之前先把进行中的一次拖动结算掉，否则那一次调整会丢。
+	_flush_confidence()
 	focused_claim = id
 	_sync_judgment_panel()
 
-## 把右栏刷新成"当前聚焦的 Claim"的样子：原文、已记录的判定、置信度、分析员上下文。
+## 把右栏刷新成"当前聚焦的 Claim"的样子：原文、判定、确定程度、分析员上下文。
+## 读数一律来自 CaseState.current_judgments —— 那是唯一可信的来源。
+## v0.2 这里读的是"历史里该 Claim 的最后一条"，于是出现
+## 「UI 显示 80% / 内部缓存 50%」这种两个真相打架的情况。
 func _sync_judgment_panel() -> void:
 	for id in _claim_tabs:
 		var tab: Dictionary = _claim_tabs[id]
@@ -454,50 +463,59 @@ func _sync_judgment_panel() -> void:
 		[focused_claim, str(claim.get("short", "")).to_upper()])
 	_claim_text.text = "“" + str(claim.get("text", "")) + "”"
 
-	var last := _last_judgment(focused_claim)
-	_judgment.value = str(last.get("judgment", ""))
+	var judgment := CaseState.current_judgment(focused_claim)
+	var confidence := CaseState.current_confidence(focused_claim)
 
-	var confidence := int(last.get("confidence", _confidence_by_claim.get(focused_claim, 50)))
-	_confidence_by_claim[focused_claim] = confidence
+	_judgment.value = judgment
+
 	for child in _confidence_box.get_children():
 		child.queue_free()
-	var row := confidence_row(confidence, func(v: int) -> void: _on_confidence_changed(v))
+	var row := confidence_row(confidence, _on_confidence_live, _on_confidence_commit)
+	_confidence_slider = row[2]
 	_confidence_box.add_child(row[0])
 
 	_refresh_tab_dots()
+	_sync_analyst_context()
+
+func _sync_analyst_context() -> void:
 	if _analyst != null:
-		_analyst.set_context(focused_claim, str(last.get("judgment", "")), CaseState.focused_evidence)
+		_analyst.set_context(focused_claim, CaseState.current_judgment(focused_claim),
+			CaseState.focused_evidence)
 
 func _refresh_tab_dots() -> void:
 	for id in _claim_tabs:
-		var stored := _last_judgment(id)
 		var dot: ColorRect = _claim_tabs[id]["dot"]
-		if stored.is_empty() or str(stored.get("judgment", "")) == "":
+		var judgment := CaseState.current_judgment(id)
+		if judgment == "":
 			dot.color = Color(0, 0, 0, 0)
 		else:
-			dot.color = UIKit.judgment_color(str(stored["judgment"]))
+			dot.color = UIKit.judgment_color(judgment)
 
-func _last_judgment(claim_id: String) -> Dictionary:
-	var entries := CaseState.journey(claim_id)
-	if entries.is_empty():
-		return {}
-	return entries[entries.size() - 1]
-
-func _on_judgment_changed(_key: String) -> void:
-	_record()
-
-func _on_confidence_changed(v: int) -> void:
-	_confidence_by_claim[focused_claim] = v
-	_record()
-
-func _record() -> void:
-	var judgment := _judgment.value
-	if judgment == "":
-		return
-	CaseState.record_judgment(focused_claim, judgment, int(_confidence_by_claim.get(focused_claim, 50)), _pending_trigger)
+# ─────────────────────────────────────────────────────────────
+#  判定与确定程度的写入口
+#
+#  两条路径分开：
+#    判定改变 → select_judgment（会按"改之前是什么"决定事件类型）
+#    确定程度改变 → 实时 set_confidence（不记事件）+ 松手 commit_confidence（记一次）
+# ─────────────────────────────────────────────────────────────
+func _on_judgment_changed(key: String) -> void:
+	# 这里只接 selected ——它只在玩家真的点击时发。程序化回填走 value_changed，
+	# 不会掉进这条路径，所以刷新面板不会伪造出一条改判记录。
+	CaseState.select_judgment(focused_claim, key, -1, _cause)
+	_cause = "revised"
 	_refresh_tab_dots()
-	if _analyst != null:
-		_analyst.set_context(focused_claim, judgment, CaseState.focused_evidence)
+	_sync_analyst_context()
+
+func _on_confidence_live(v: int) -> void:
+	CaseState.set_confidence(focused_claim, v)
+
+func _on_confidence_commit(_v: int, previous: int) -> void:
+	CaseState.commit_confidence(focused_claim, previous)
+
+## 把进行中的一次拖动结算掉。切 Claim、离开页面、提交之前都要调。
+func _flush_confidence() -> void:
+	if _confidence_slider != null and is_instance_valid(_confidence_slider):
+		_confidence_slider.commit_pending()
 
 # ─────────────────────────────────────────────────────────────
 #  证据详情
@@ -507,7 +525,7 @@ func _open_detail(evidence_id: String) -> void:
 		_detail.queue_free()
 	CaseState.focused_evidence = evidence_id
 	CaseState.mark_opened(evidence_id)
-	_pending_trigger = "evidence:" + evidence_id
+	_cause = "evidence:" + evidence_id
 
 	var card: EvidenceCard = _cards.get(evidence_id, null)
 	if card != null:
@@ -518,10 +536,8 @@ func _open_detail(evidence_id: String) -> void:
 	_detail.closed.connect(func() -> void:
 		_refresh_sources()
 		_refresh_tab_dots()
-		if _analyst != null:
-			_analyst.set_context(focused_claim, _judgment.value, evidence_id))
-	if _analyst != null:
-		_analyst.set_context(focused_claim, _judgment.value, evidence_id)
+		_sync_analyst_context())
+	_sync_analyst_context()
 
 func _on_classified(evidence_id: String, relevance: String, kind: String) -> void:
 	CaseState.classify(evidence_id, relevance, kind)
@@ -545,9 +561,14 @@ func _build_footer() -> Control:
 
 	var submit := UIKit.primary_button(Locale.t("board.submit"))
 	submit.custom_minimum_size = Vector2(300, 46)
-	submit.pressed.connect(func() -> void: finished.emit("final"))
+	submit.pressed.connect(_on_submit)
 	row.add_child(submit)
 	return row
+
+func _on_submit() -> void:
+	# 提交前把进行中的一次拖动结算掉：状态、显示、事件三者必须一致。
+	_flush_confidence()
+	finished.emit("final")
 
 func _flash_hint(text: String, color: Color) -> void:
 	_hint.text = text

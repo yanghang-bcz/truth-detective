@@ -424,24 +424,79 @@
   "debrief": {
     "title": "Reasoning Debrief",
     "lede": "Not a score. A record of how your reading changed, and why.",
-    "patterns": {
-      "context": {
-        "label": "Context Awareness",
-        "good": "You went behind the clip on your own. The decisive material was never in the post.",
-        "weak": "The decisive material sat behind a second recording the post never mentions. It went unexamined."
-      },
-      "overgeneralisation": {
-        "label": "Overgeneralisation",
-        "good": "You kept claims about a person, and about a generation, separate from claims about one evening.",
-        "weak": "At least one judgment let a single incident stand in for a person, or for an age group."
-      },
-      "premature": {
-        "label": "Premature Judgment",
-        "good": "Your confidence moved with the evidence rather than ahead of it.",
-        "weak": "You recorded high confidence before the file could support it. Certainty that arrives early usually has to be revised later."
-      }
-    },
     "closing": "The clip was not faked. Nobody edited it. It was simply too short, published to be shared, and read as though it were the whole minute.",
     "closing_note": "Claims A and B differ by three words. Three words were enough to change a true statement into an unsupported one."
+  },
+  "feedback": {
+    "all_aligned": "All four of your final judgments fall inside the range this file accepts. That is a reading of the claims, not a verdict on you. The two that carry weight are B and D — each fails on a single word or a single step, and both read as convincing right up until that word or step is named.",
+    "aligned_unseen": "This claim matches the reading the file accepts — but the material that decides it was never opened. The answer can still be right; what is missing is the ability to say what would have changed it.",
+    "gloss": {
+      "supported": "The file contains material that establishes this, and nothing in it points the other way.",
+      "unsupported": "The file does not carry this. That is not the same as the file showing the opposite — it means the claim asks for more than the record can give.",
+      "insufficient": "The file neither establishes this nor rules it out. What is missing is the kind of material the claim would need to be answered either way.",
+      "suspicious": "Something in the file leans against this, but not far enough to settle it."
+    },
+    "claims": {
+      "A": {
+        "options": {
+          "unsupported": {
+            "text": "This claim is deliberately narrow: it says the language was used, and stops there. Evidence #01 records exactly that, and the longer recording #04 catches the same raised voice rather than contradicting it. Withholding support here asks the file to prove something it was never asked to prove.",
+            "training": "Separate what happened from why it happened. Claims about the bare event usually survive contact with the record; claims about motive usually do not."
+          },
+          "insufficient": {
+            "text": "The claim does not ask what led to the exchange or who was in the right — only whether the words were spoken. Evidence #01 is a direct recording of that moment. More material would add context, not change what was said.",
+            "training": "Before calling something “not enough”, name what specifically is missing. If you cannot point at anything, the gap may be imaginary."
+          },
+          "suspicious": {
+            "text": "Unease belongs to Claim B, not to A. The two differ by three words, and the words that fail are “without provocation”. Here the doubt lands on the part the recording actually captures.",
+            "training": "When a claim feels wrong, find the word doing the work. The doubt usually belongs to that word rather than to the whole sentence."
+          }
+        }
+      },
+      "B": {
+        "options": {
+          "supported": {
+            "text": "The load-bearing phrase is “without provocation”. Evidence #04 and #08 both show the exchange was already underway before the recording began. Her tone may well have been aggressive — Claim A covers that — but this sentence asserts something the record actively works against.",
+            "training": "Read for the word the claim cannot survive without. Endorsing the sentence whole means accepting the part the evidence already contradicts."
+          },
+          "insufficient": {
+            "text": "This is not a gap. Evidence #04 and #08 speak directly to the disputed point, and what they show runs against the claim. Calling it “not enough evidence” leaves “without provocation” standing after the file has already answered it.",
+            "training": "“Not enough evidence” and “the evidence points the other way” are different verdicts. Choosing the softer one still lets the wrong reading through."
+          },
+          "suspicious": {
+            "text": "“Suspicious” records unease without naming it. Here the difficulty has a name: the exchange was already in progress when the recording started. A verdict you can state is more useful than one you can only feel.",
+            "training": "Turn unease into a sentence. If you can say what is wrong, say it — that is what a claim-level verdict is for."
+          }
+        }
+      },
+      "C": {
+        "options": {
+          "supported": {
+            "text": "One recorded minute can support a statement about what someone did. It cannot support a statement about who they are. Nothing in the file describes this woman outside this single exchange, so the reading has no floor to stand on.",
+            "training": "Watch for the moment a single action is quietly promoted into a description of a person."
+          },
+          "unsupported": {
+            "text": "“Unsupported” would mean the file leans against this. It does not lean either way — there is simply nothing in it about her character. That is a gap, and a gap is a different verdict from a contradiction.",
+            "training": "Distinguish “the file says no” from “the file does not say”. Both feel like rejection; only one is supported."
+          },
+          "suspicious": {
+            "text": "Suspicion points at something present that does not hold together. Nothing about her character is present at all: the clip records one exchange, and character lies outside what it recorded.",
+            "training": "Check whether the evidence is thin or absent. Absent evidence calls for a different verdict than shaky evidence."
+          }
+        }
+      },
+      "D": {
+        "options": {
+          "supported": {
+            "text": "One encounter cannot describe a generation. The step from a single case to an entire age group is one the evidence cannot take, whatever the clip shows.",
+            "training": "Notice when a claim grows its subject — from this person to a group, from now to a trend."
+          },
+          "suspicious": {
+            "text": "This is the same step as Claim C, one order of magnitude larger. The file holds one recorded exchange; it says nothing about how young people in general behave, now or before.",
+            "training": "Size the subject to the evidence. One case can illustrate; it cannot describe."
+          }
+        }
+      }
+    }
   }
 }

@@ -340,7 +340,7 @@ and screen evidence at every step:
 | File E01 / E04 / E08 on the evidence board | ✅ 3 / 8 opened, 6 / 10 points spent |
 | Analyst answers | ✅ `source=ai ok=true`, content strictly tied to unlocked evidence |
 | All four claims judged and submitted | ✅ A supported / B unsupported / C not enough evidence / D unsupported |
-| Debrief rendered | ✅ three reasoning patterns STRONG |
+| Debrief rendered | ✅ aligned count per claim (n / 4) + per-claim reasoning, no ability rating |
 | Key unreachable over HTTP | ✅ `/deepseek.key`, `/server.js` both 404 |
 | Backend safety suite against production | ✅ 17 / 17, including one live DeepSeek round trip |
 

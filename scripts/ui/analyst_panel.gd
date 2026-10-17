@@ -222,11 +222,11 @@ func _current_evidence_id() -> String:
 	return ""
 
 
+## 玩家现在对这条 Claim 的判断。直接读统一状态 ——
+## v0.2 这里是"沿历史往前找最近一个非空判断"，等于从操作日志里猜现状，
+## 一旦玩家把判断清空（UI 显示未作答），这里还会翻出旧值。
 func _judgment() -> String:
-	for entry in CaseState.journey(focused_claim):
-		if str(entry["judgment"]) != "":
-			return str(entry["judgment"])
-	return ""
+	return CaseState.current_judgment(focused_claim)
 
 
 # ─────────────────────────────────────────────────────────────

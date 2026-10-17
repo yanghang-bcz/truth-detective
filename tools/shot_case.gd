@@ -62,14 +62,14 @@ func _pass(lang: String) -> void:
 
 	# ── 2. 调查板（填成玩到一半的样子）──────────────────────
 	CaseState.start()
-	CaseState.record_judgment("B", "suspicious", 65, "initial")
+	CaseState.confirm_initial("B", "suspicious", 65)
 	for id in ["E01", "E02", "E04"]:
 		CaseState.unlock(id)
 	CaseState.mark_opened("E01")
 	CaseState.classify("E01", _option("relevance", 0), _option("kind", 0))
 	CaseState.mark_opened("E04")
 	CaseState.focused_evidence = "E04"
-	CaseState.record_judgment("B", "unsupported", 55, "evidence:E04")
+	CaseState.select_judgment("B", "unsupported", 55, "evidence:E04")
 	_case._show("board")
 	await _settle(1.1)
 	await _shot("04_board")
@@ -93,20 +93,20 @@ func _pass(lang: String) -> void:
 	await _settle(0.5)
 	await _shot("07_evidence_classified")
 
-	# ── 4. 最终判定 ────────────────────────────────────────
-	_case._show("final")
-	await _settle(1.0)
+	# ── 4. 最终判定（Final Review）─────────────────────────
+	# v0.3：这一页读的是 CaseState.current，不自己存一份答案。
+	# 所以必须**先把答案写进统一状态、再进界面** —— 反过来先建界面再改控件值，
+	# 截出来的图和 Debrief 复盘用的就不是同一份数据。
 	var answers := {"A": "supported", "B": "unsupported", "C": "insufficient", "D": "insufficient"}
-	var rows: Dictionary = _case._phase._rows
-	for id in rows:
-		rows[id]["judgment"].value = answers.get(id, "insufficient")
+	for id in answers:
+		CaseState.select_judgment(id, answers[id], 78, "final")
+	_case._show("final")
 	await _settle(1.0)
 	await _shot("08_final")
 
 	# ── 5. 复盘 ────────────────────────────────────────────
-	for id in answers:
-		CaseState.set_final(id, answers[id], 80)
-		CaseState.record_judgment(id, answers[id], 78, "final")
+	# 终判 = 对 current 的一次快照；四条答案齐了才提交得上。
+	CaseState.confirm_final()
 	_case._show("debrief")
 	await _settle(1.4)
 	await _shot("09_debrief")

@@ -92,8 +92,14 @@ func section(text: String, color: Color = UIKit.SLATE) -> Control:
 
 ## 置信度行：左边一行字，右边一个大号的百分比读数，下面一条滑条。
 ## 三个阶段共用同一套手感 —— 玩家学会一次就够。
-## 返回 [控件, 取值函数]，取值函数在需要提交时调用。
-func confidence_row(initial: int, on_change: Callable = Callable()) -> Array:
+##
+## 返回 [控件, 取值函数, 滑条]。第三个元素是给调用方在切页面/换 Claim 之前
+## 调 `commit_pending()` 用的 —— 拖动被打断时也要把这一次调整结算掉。
+##
+## on_change  值实时在变时调用（更新状态、刷新读数）
+## on_commit  一次交互结束时调用一次（记一条 CONFIDENCE_ADJUSTED）
+func confidence_row(initial: int, on_change: Callable = Callable(),
+		on_commit: Callable = Callable()) -> Array:
 	var box := VBoxContainer.new()
 
 	# 一行装完：标签、滑条、读数。
@@ -108,11 +114,13 @@ func confidence_row(initial: int, on_change: Callable = Callable()) -> Array:
 	row.add_child(caption)
 
 	var slider := ConfidenceSlider.new()
+	# 尺寸必须在入树**之前**设好：入树后 _ready() 会跑，而它只补默认值、
+	# 不会覆盖调用方给的值。反过来的话（先入树再设）就赶上 _ready 的时机，
+	# 一旦 _ready 里写了无条件赋值，宽度就会被清零 —— v0.2 的滑条正是这么坏的。
+	slider.custom_minimum_size = Vector2(200, 30)
 	slider.value = initial
 	slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(slider)
-	# 在 add_child 之后设尺寸：ConfidenceSlider 的 _ready 会覆盖 custom_minimum_size。
-	slider.custom_minimum_size = Vector2(200, 28)
 
 	# 读数刻意做小、做暗。它回答的是"你有多确定"——一个次要问题。
 	# 原先它是 22px 的暖黄大数字，比上面四个判定按钮加起来还抢眼，
@@ -130,7 +138,11 @@ func confidence_row(initial: int, on_change: Callable = Callable()) -> Array:
 		if on_change.is_valid():
 			on_change.call(v))
 
-	return [box, func() -> int: return slider.value]
+	slider.committed.connect(func(v: int, previous: int) -> void:
+		if on_commit.is_valid():
+			on_commit.call(v, previous))
+
+	return [box, func() -> int: return slider.value, slider]
 
 
 ## 让一栏内容自上而下依次浮现，像一份文件正在被摊开。

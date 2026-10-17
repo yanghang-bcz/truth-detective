@@ -43,6 +43,7 @@ static func load_case(path: String) -> Dictionary:
 		claim_index[str(c.get("id", ""))] = c
 	data["_evidence"] = evidence_index
 	data["_claims"] = claim_index
+	diagnose(data)
 	return data
 
 
@@ -91,3 +92,126 @@ static func first_gap(data: Dictionary, unlocked: Array) -> Dictionary:
 		if not covered:
 			return gap
 	return {}
+
+
+# ─────────────────────────────────────────────────────────────
+#  判断一致性评价（v0.3）
+#
+#  这一层只回答一个问题：**玩家的最终判断，是否落在案件参考判断的接受范围里。**
+#  它不是批判性思维评分，也不是稳定的个人能力测评 —— 单局行为撑不住那种结论。
+#
+#  v0.2 只读 claim.verdict 一个字符串，于是 Claim D 被判为 unsupported、玩家选
+#  insufficient 时会被标成"错误"，而案件数据本身早就写着两种都接受。
+#  现在一律走 verdict_accepts（为空才回退到 verdict）。
+# ─────────────────────────────────────────────────────────────
+## 合法的判定标签。与 UIKit.JUDGMENT_ORDER 同源，但这里不能引用 UIKit ——
+## CaseData 要被 headless 的 --script 工具调用，那个模式不注册 autoload。
+const JUDGMENT_KEYS: Array[String] = ["supported", "suspicious", "unsupported", "insufficient"]
+
+
+## 标签规范化。大小写、前后空格都不该改变含义。
+static func normalize_judgment(value: String) -> String:
+	return value.strip_edges().to_lower()
+
+
+## 一条 Claim 接受的答案集合。
+## 规则：verdict_accepts 非空就用它，否则回退到单个 verdict。
+## 注意 verdict 自身也要在规范化之后被包含进来，不能因为大小写差异被意外排除。
+static func accepted_verdicts(claim: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	for raw in claim.get("verdict_accepts", []):
+		var v := normalize_judgment(str(raw))
+		if v != "" and not (v in out):
+			out.append(v)
+	if out.is_empty():
+		var fallback := normalize_judgment(str(claim.get("verdict", "")))
+		if fallback != "":
+			out.append(fallback)
+	return out
+
+
+## 玩家的答案是否在参考判断的接受范围内。
+## 未作答一律不算一致 —— "" 不是答案，不该被当成"碰巧对了"。
+static func is_aligned(claim: Dictionary, judgment: String) -> bool:
+	var answer := normalize_judgment(judgment)
+	if answer == "":
+		return false
+	return answer in accepted_verdicts(claim)
+
+
+## 整卷的一致性计数，返回 [一致条数, 总条数]。
+static func alignment_tally(data: Dictionary, final_judgments: Dictionary) -> Array:
+	var total := 0
+	var hit := 0
+	for c in claims(data):
+		var id := str(c.get("id", ""))
+		total += 1
+		var answer := str(final_judgments.get(id, {}).get("judgment", ""))
+		if is_aligned(c, answer):
+			hit += 1
+	return [hit, total]
+
+
+## 开发期数据诊断。数据写错时**不要**静默把玩家判成错的 ——
+## 那会让"案件数据有问题"伪装成"玩家答错了"，是最难查的一类 bug。
+## 只在 debug 构建里跑，导出包里零开销。
+static func diagnose(data: Dictionary) -> Array[String]:
+	if not OS.is_debug_build():
+		return []
+	var problems: Array[String] = []
+	for c in claims(data):
+		var id := str(c.get("id", ""))
+		var accepted := accepted_verdicts(c)
+		if accepted.is_empty():
+			problems.append("Claim %s 既没有 verdict_accepts 也没有 verdict" % id)
+		for v in accepted:
+			if not (v in JUDGMENT_KEYS):
+				problems.append("Claim %s 接受了未知标签 %s" % [id, v])
+		var declared := normalize_judgment(str(c.get("verdict", "")))
+		if declared != "" and accepted.size() > 0 and not (declared in accepted):
+			problems.append("Claim %s 的 verdict=%s 不在自己的 verdict_accepts 里" % [id, declared])
+	for p in problems:
+		push_warning("CaseData: " + p)
+	return problems
+
+
+# ─────────────────────────────────────────────────────────────
+#  复盘反馈（v0.3）
+#
+#  个性化反馈走 Deterministic Feedback：**不用 LLM 现场编**。
+#  依据玩家实际选错的那个选项，取一条预先写好、经过人工审核的说明。
+#  "所有错误答案共用一段安慰话"是 v0.2 最大的问题 —— 玩家读完不知道自己错在哪。
+# ─────────────────────────────────────────────────────────────
+## 某个 Claim 下，玩家选了某个（不在接受范围内的）答案时的针对性说明。
+## 返回 {text, training}；没有对应条目时返回空字典，界面据此不显示这一块
+## —— 宁可不说话，也不要硬套一段模板。
+static func feedback_for(data: Dictionary, claim_id: String, judgment: String) -> Dictionary:
+	var table: Dictionary = data.get("feedback", {}).get("claims", {})
+	var by_claim: Dictionary = table.get(claim_id, {})
+	var options: Dictionary = by_claim.get("options", {})
+	return options.get(normalize_judgment(judgment), {})
+
+
+## 四条全部一致时的总结（不含能力等级，只讲证据边界）。
+static func feedback_all_aligned(data: Dictionary) -> String:
+	return str(data.get("feedback", {}).get("all_aligned", ""))
+
+
+## 判断与参考一致、但关键证据没解锁时的那句提示（§9.6）。
+## 案件数据要能可靠判定"关键证据"范围才显示 —— decisive_evidence 为空就不显示。
+static func feedback_aligned_unseen(data: Dictionary, claim_id: String,
+		unlocked: Array) -> String:
+	var claim := claim(data, claim_id)
+	var decisive: Array = claim.get("decisive_evidence", [])
+	if decisive.is_empty():
+		return ""
+	for id in decisive:
+		if str(id) in unlocked:
+			return ""
+	return str(data.get("feedback", {}).get("aligned_unseen", ""))
+
+
+## 锚定在参考标签上的一句释义（§9.7）。避免把 Unsupported 读成"已证明为假"。
+static func verdict_gloss(data: Dictionary, judgment: String) -> String:
+	var table: Dictionary = data.get("feedback", {}).get("gloss", {})
+	return str(table.get(normalize_judgment(judgment), ""))

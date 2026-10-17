@@ -68,25 +68,58 @@ case "${1:-}" in
     echo "重建完成。注意顺序不能反：build_playable 依赖 build_scene 产出的 neighborhood_collision.res"
     ;;
   --test)
-    echo "== 玩法回归测试 =="
-    run_script test_player.gd | grep -E "^(PASS|FAIL)" || true
-    echo "== 真实输入链路（键盘事件 → InputMap → 角色位移）=="
+    # 每一段单独跑、单独记退出码。
+    #
+    # 这里**不能**写成 `... | grep ... || true`：管道的退出码是 grep 的，
+    # `|| true` 又把它抹平 —— 结果测试全崩，`./godot.sh --test` 照样返回 0。
+    # v0.3 之前正是这个写法，这条命令从来没有能力失败，也就没有资格当验收依据。
+    TEST_TOTAL=0
+    TEST_FAILED=0
+    seg() {
+      local label="$1"; shift
+      local out rc
+      echo "$label"
+      set +e
+      out=$("$@" 2>&1)
+      rc=$?
+      set -e
+      printf '%s\n' "$out" | grep -E '^(PASS|FAIL|NOTE|ERROR|CASE_TRIGGER|AI_TESTS|V03_TESTS)' || true
+      TEST_TOTAL=$((TEST_TOTAL + 1))
+      if [[ "$rc" -ne 0 ]]; then
+        echo "!! ${label} —— 该段退出码 $rc"
+        TEST_FAILED=$((TEST_FAILED + 1))
+      fi
+      return 0
+    }
+
+    seg "== 玩法回归测试 ==" \
+      "$GODOT" --path "$PROJECT_DIR" --headless --script res://tools/test_player.gd
     # test_player 走的是 automated + test_input 旁路，证明不了"玩家真按键会动"。
     # 网页版最容易死在这一段：物理全绿、角色却站着不动。
-    run_script test_input_map.gd | grep -E "^(PASS|FAIL)" || true
-    echo "== 地铁口可达性（从出生点真的走过去）=="
+    seg "== 真实输入链路（键盘事件 → InputMap → 角色位移）==" \
+      "$GODOT" --path "$PROJECT_DIR" --headless --script res://tools/test_input_map.gd
     # test_case_trigger 是把玩家瞬移进触发区的，证明不了"出生点能走到地铁口"。
     # 出生点/碰撞体一改就可能把整局游戏走死，而其它测试全绿。
-    run_script test_metro_reachability.gd | grep -E "^(PASS|FAIL|NOTE)" || true
-    echo "== 场景校验 =="
-    run_script validate_scene.gd | grep -E "^(PASS|ERROR)" || true
-    echo "== 地铁口触发冒烟测试（地铁口 → [E] → 案件 → 关闭 → 回到街上）=="
+    seg "== 地铁口可达性（从出生点真的走过去）==" \
+      "$GODOT" --path "$PROJECT_DIR" --headless --script res://tools/test_metro_reachability.gd
+    seg "== 场景校验 ==" \
+      "$GODOT" --path "$PROJECT_DIR" --headless --script res://tools/validate_scene.gd
     # 这一条必须用场景方式跑：--script 模式不注册 autoload，引用 CaseState 会编译失败。
-    "$GODOT" --path "$PROJECT_DIR" res://tools/test_case_trigger.tscn \
-      | grep -E "^(PASS|FAIL|NOTE|CASE_TRIGGER)" || true
-    echo "== AI 层回归（Safe Context / Validator / 优雅降级 / 额度与缓存）=="
-    "$GODOT" --path "$PROJECT_DIR" --headless res://tools/test_ai.tscn \
-      | grep -E "^(PASS|FAIL|NOTE|AI_TESTS)" || true
+    seg "== 地铁口触发冒烟测试（地铁口 → [E] → 案件 → 关闭 → 回到街上）==" \
+      "$GODOT" --path "$PROJECT_DIR" res://tools/test_case_trigger.tscn
+    seg "== AI 层回归（Safe Context / Validator / 优雅降级 / 额度与缓存）==" \
+      "$GODOT" --path "$PROJECT_DIR" --headless res://tools/test_ai.tscn
+    # v0.3 新增。此前 98 项全绿却对 Confidence、状态继承、事件历史、Debrief 内容
+    # 零覆盖 —— 代码结构再清晰，也不等于功能是对的。
+    seg "== v0.3 验收（Confidence 拖动 / 状态继承 / 切语言 / 事件历史 / Debrief / AI 快照）==" \
+      "$GODOT" --path "$PROJECT_DIR" --headless res://tools/test_v03.tscn
+
+    echo
+    if [[ "$TEST_FAILED" -ne 0 ]]; then
+      echo "== 测试未通过：$TEST_FAILED / $TEST_TOTAL 段失败 =="
+      exit 1
+    fi
+    echo "== 全部 $TEST_TOTAL 段测试通过 =="
     ;;
   --bench)
     "$GODOT" --path "$PROJECT_DIR" --resolution 1280x800 --script res://tools/bench.gd | grep -E "^BENCH" || true

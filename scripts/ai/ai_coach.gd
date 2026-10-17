@@ -32,6 +32,8 @@ var last_result: Dictionary = {}
 var _client: DeepSeekClient = null
 var _cache: Dictionary = {}
 var _pending: Dictionary = {}
+## 咨询序号。请求发出时 +1，用来给每次咨询一个稳定的 id。
+var _consult_seq := 0
 
 
 func _ready() -> void:
@@ -76,22 +78,16 @@ func state() -> Dictionary:
 	}
 
 
-## 玩家当前在看的那张 Claim 上的判断 / 把握。取最后一条记录 ——
-## 历史是追加的，最后一条才是"他现在怎么看"。
+## 玩家当前在看的那张 Claim 上的判断 / 把握。
+## 直接读 current_judgments —— 那是唯一可信的当前状态。
+## v0.2 这里是从 history 里倒着找"最近一条"，等于用操作日志猜现状：
+## 玩家把判断清空之后，界面显示未作答，这里还能翻出一个旧值送进模型。
 func judgment_of(claim_id: String) -> String:
-	for i in range(CaseState.history.size() - 1, -1, -1):
-		var entry: Dictionary = CaseState.history[i]
-		if str(entry.get("claim", "")) == claim_id:
-			return str(entry.get("judgment", ""))
-	return ""
+	return CaseState.current_judgment(claim_id)
 
 
 func confidence_of(claim_id: String) -> int:
-	for i in range(CaseState.history.size() - 1, -1, -1):
-		var entry: Dictionary = CaseState.history[i]
-		if str(entry.get("claim", "")) == claim_id:
-			return int(entry.get("confidence", 50))
-	return 50
+	return CaseState.current_confidence(claim_id)
 
 
 ## 本案里**存在**的编号（不区分解锁与否）。Validator 需要它来区分
@@ -113,8 +109,14 @@ func ask(action: String, claim_id: String, evidence_id: String) -> void:
 	if needs_card and evidence_id == "":
 		return
 
+	# 请求发起那一刻的状态快照。**这不是可选的细节**：模型可能要想几秒，
+	# 玩家完全来得及在这几秒里改判断。如果等回复到了再读状态，
+	# 历史里记下的就是"回复那瞬间"的答案，被冒充成"提问那一刻"的答案 ——
+	# 复盘时看起来像是 AI 是在他的新判断下回答的，而事实上不是。
+	var snapshot := _snapshot(claim_id)
+
 	if not can_use_ai():
-		_deliver(action, claim_id, _offline(action, claim_id, evidence_id))
+		_deliver(action, claim_id, _offline(action, claim_id, evidence_id), snapshot)
 		return
 
 	var ctx := AiContextBuilder.build(CaseState.data, CaseState.unlocked, claim_id,
@@ -131,11 +133,13 @@ func ask(action: String, claim_id: String, evidence_id: String) -> void:
 			"text": str(hit.get("text", "")),
 			"basis": hit.get("basis", []),
 			"source": "cache",
-		})
+		}, snapshot)
 		return
 
 	busy = true
-	_pending = {"action": action, "claim": claim_id, "evidence": evidence_id, "key": key}
+	_pending = {"action": action, "claim": claim_id, "evidence": evidence_id,
+		"key": key, "snapshot": snapshot}
+	_consult_seq += 1
 	state_changed.emit()
 	print("[AiCoach] -> deepseek action=%s claim=%s target=%s unlocked=%d" % [
 		action, claim_id, target, CaseState.unlocked.size()])
@@ -144,18 +148,32 @@ func ask(action: String, claim_id: String, evidence_id: String) -> void:
 		_on_response)
 
 
+## 一次咨询的"提问时刻"信息。consultation_id 用来把请求和回复对上，
+## 也方便以后要按次序复盘每一次咨询。
+func _snapshot(claim_id: String) -> Dictionary:
+	return {
+		"consultation_id": "consult_%03d" % (_consult_seq + 1),
+		"claim": claim_id,
+		"judgment_at_request": judgment_of(claim_id),
+		"confidence_at_request": confidence_of(claim_id),
+		"unlocked_evidence_at_request": CaseState.unlocked.duplicate(),
+		"request_event_order": CaseState.events.size(),
+	}
+
+
 func _on_response(result: Dictionary) -> void:
 	var action := str(_pending.get("action", ""))
 	var claim := str(_pending.get("claim", ""))
 	var evidence := str(_pending.get("evidence", ""))
 	var key := str(_pending.get("key", ""))
+	var snapshot: Dictionary = _pending.get("snapshot", {})
 
 	if not bool(result.get("ok", false)):
 		# 请求就没成功。退回离线答复，并把原因留给界面显示 ——
 		# 但**不扣次数**：玩家没拿到东西。
 		var offline := _offline(action, claim, evidence)
 		offline["failure"] = str(result.get("code", ""))
-		_deliver(action, claim, offline)
+		_deliver(action, claim, offline, snapshot)
 		return
 
 	var text := AiResponseValidator.clamp(str(result.get("text", "")), Locale.lang)
@@ -165,7 +183,7 @@ func _on_response(result: Dictionary) -> void:
 		# 界面上只出现一句人话。
 		var safe := _offline(action, claim, evidence)
 		safe["blocked"] = str(verdict.get("reason", ""))
-		_deliver(action, claim, safe)
+		_deliver(action, claim, safe, snapshot)
 		return
 
 	# 走到这里才算一次真正的 AI 答复。
@@ -173,11 +191,14 @@ func _on_response(result: Dictionary) -> void:
 	var basis: Array = cited if not cited.is_empty() else CaseState.unlocked.duplicate()
 	CaseState.consume_analyst_token()
 	_cache[key] = {"text": text, "basis": basis}
-	_deliver(action, claim, {"ok": true, "text": text, "basis": basis, "source": "ai"})
+	_deliver(action, claim, {"ok": true, "text": text, "basis": basis, "source": "ai"}, snapshot)
 
 
 ## 所有出口都走这里：统一记账、统一发信号。
-func _deliver(action: String, claim: String, payload: Dictionary) -> void:
+## snapshot 是**请求发起时**的状态；回复时玩家的状态可能已经变了，
+## 两者必须分开记，不能让后者冒充前者。
+func _deliver(action: String, claim: String, payload: Dictionary,
+		snapshot: Dictionary = {}) -> void:
 	busy = false
 	_pending = {}
 
@@ -206,10 +227,17 @@ func _deliver(action: String, claim: String, payload: Dictionary) -> void:
 	# Debrief 里那一行问的是"你问了几次分析员"，不是"你花了多少电"。
 	CaseState.note_consult()
 	CaseState.record_ai({
+		"consultation_id": str(snapshot.get("consultation_id", "")),
 		"action": action,
 		"claim": claim,
-		"judgment": judgment_of(claim),
-		"confidence": confidence_of(claim),
+		# 提问时刻的判断 / 把握。**不要**在这里重新读当前状态。
+		"judgment": str(snapshot.get("judgment_at_request", "")),
+		"confidence": int(snapshot.get("confidence_at_request", CaseState.DEFAULT_CONFIDENCE)),
+		"unlocked_at_request": snapshot.get("unlocked_evidence_at_request", []),
+		"request_event_order": int(snapshot.get("request_event_order", 0)),
+		# 回复时刻的状态，单独记，供开发期排查用。
+		"judgment_at_response": judgment_of(claim),
+		"response_source": source,
 		"evidence": result["basis"],
 		"opened": CaseState.unlocked.size(),
 		"source": source,
@@ -284,4 +312,5 @@ func _on_case_started() -> void:
 	_pending.clear()
 	busy = false
 	last_result = {}
+	_consult_seq = 0
 	state_changed.emit()

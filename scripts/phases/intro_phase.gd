@@ -19,9 +19,13 @@ var _idle_hint := ""
 var _tracking: FontVariation
 
 func _build() -> void:
-	# 玩家已经给过初始判定的话（切语言会让这一页被重建），把读数还回去 ——
-	# 否则换一次语言会像是"我刚选的被吃掉了"。
-	var stored: Dictionary = CaseState.initial_judgments.get("B", {})
+	# 切语言会把这一页整个重建。读数要从**草稿**里还回去 ——
+	# 不是从 initial_judgments：玩家可能还没点"开始调查"，
+	# 这时候把草稿当成正式初判，就等于替他提交了一次。
+	# 旧代码从 initial_judgments 读，于是换一次语言像是"我刚选的被吃掉了"。
+	var draft: Dictionary = CaseState.intro_draft
+	if draft.is_empty():
+		draft = CaseState.initial_judgments.get("B", {})
 
 	var c := scroll_column(760)
 	c.add_child(UIKit.gap(12))
@@ -45,11 +49,13 @@ func _build() -> void:
 	c.add_child(UIKit.gap(18))
 
 	_judgment_row = JudgmentRow.make(false, true)
-	_judgment_row.value = str(stored.get("judgment", ""))
+	_judgment_row.value = str(draft.get("judgment", ""))
+	_judgment_row.selected.connect(_on_draft_judgment)
 	c.add_child(_judgment_row)
 	c.add_child(UIKit.gap(18))
 
-	var confidence := confidence_row(int(stored.get("confidence", 50)))
+	var confidence := confidence_row(int(draft.get("confidence", CaseState.DEFAULT_CONFIDENCE)),
+		_on_draft_confidence)
 	c.add_child(confidence[0])
 	_confidence_getter = confidence[1]
 	c.add_child(UIKit.gap(10))
@@ -64,6 +70,21 @@ func _build() -> void:
 
 	stagger_fade(c, 0.05, 0.40)
 	_focus_title()
+
+# ─────────────────────────────────────────────────────────────
+#  草稿
+#
+#  还没点"开始调查"之前，玩家选的都只是草稿。存进 CaseState 只为了
+#  **切语言/重建页面不丢**，绝不能写成 INITIAL_CONFIRMED ——
+#  否则一次语言切换就等于替玩家提交了初判。
+# ─────────────────────────────────────────────────────────────
+func _on_draft_judgment(key: String) -> void:
+	CaseState.intro_draft["judgment"] = key
+	CaseState.intro_draft["confidence"] = int(_confidence_getter.call()) \
+		if _confidence_getter.is_valid() else int(CaseState.intro_draft.get("confidence", 50))
+
+func _on_draft_confidence(v: int) -> void:
+	CaseState.intro_draft["confidence"] = v
 
 # ─────────────────────────────────────────────────────────────
 #  标题
@@ -209,6 +230,6 @@ func _on_start() -> void:
 		tween.tween_property(_hint, "modulate", Color.WHITE, 0.6)
 		return
 	var confidence: int = _confidence_getter.call()
-	CaseState.set_initial("B", _judgment_row.value, confidence)
-	CaseState.record_judgment("B", _judgment_row.value, confidence, "Initial")
+	# 到这一步才叫"玩家提交了初判"。写 initial 快照 + current，并记 INITIAL_CONFIRMED。
+	CaseState.confirm_initial("B", _judgment_row.value, confidence)
 	finished.emit("board")
